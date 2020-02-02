@@ -2,7 +2,6 @@ const config = require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const fetch = require('node-fetch');
 const firebase = require('firebase-admin');
-
 const serviceAccount = require('./velocitytelegrambot-firebase-adminsdk-6x8f4-03b6ed7bce.json');
 
 firebase.initializeApp({
@@ -11,10 +10,9 @@ firebase.initializeApp({
 });
 
 const firestore = firebase.firestore();
-
-// replace the value below with the Telegram token you receive from @BotFather
 const token = process.env.TELEGRAM_TOKEN;
 const esvToken = process.env.ESV_TOKEN;
+const stuffPsMavisSays = ["Amen amen", "That's right", "Come on"];
 
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, {polling: true});
@@ -34,7 +32,7 @@ const fetchAndSendVerse = async (verseString, users) => {
     }    
 }
 
-const fetchAndSendVerseLate = async (verseString, id) => {
+const fetchAndSendLatest = async (verseString, id) => {
     let headerString = 'Token ' + esvToken;
     let response = await fetch('https://api.esv.org/v3/passage/text/?q=' + verseString + '&include-footnotes=false', {
         method: 'GET',
@@ -42,7 +40,7 @@ const fetchAndSendVerseLate = async (verseString, id) => {
     })
     let json = await response.json();
     let passage = json.passages[0];
-    let message = `Here's the passage for today:\n\n` + passage;
+    let message = `Here's the latest passage:\n\n` + passage;
     bot.sendMessage(id, message);    
 }
 
@@ -83,10 +81,10 @@ const checkShouldSendVerse = async () => {
         if(!verse.sent && is_past) {
             let users = await getUsers();
             
-            //send verse
+            // Send verse
             await fetchAndSendVerse(verse.verse, users);
 
-            //update verse sent
+            // Update verse sent
             let verseDocRef = firestore.collection("verses").doc(verseObj.id);
             await verseDocRef.set({
                 date: verse.date,
@@ -94,7 +92,7 @@ const checkShouldSendVerse = async () => {
                 verse: verse.verse
             })
 
-            //update latest verse sent
+            // Update latest verse sent
             firestore.collection("sent").doc("latest").set({
                 id: verseObj.id
             })                            
@@ -107,7 +105,7 @@ const generateWelcomeMessage = (name) => {
 }
 
 const generateAlreadyRegisteredMessage = (name) => {
-    return `Hello there ${name}, you are already registered. Type /today to get the verse of the day!`
+    return `Hello there ${name}, you are already registered. Type /latest to get the verse of the day!`
 }
 
 // New User
@@ -117,47 +115,39 @@ bot.on('message', async (msg) => {
         let id = msg.from.id;
         let subscription = firestore.collection('subscriptions').doc(`${id}`);
         let subscriptionSnapshot = await subscription.get();
-                
-        //check if already register
+
+        // Check if already registered
         if (!subscriptionSnapshot.exists) {
             await subscription.set({
                 chat_id: id,
                 name: name
             })
 
-            //welcome message
+            // Welcome message
             await bot.sendMessage(msg.from.id, generateWelcomeMessage(name));            
 
-            //get latest verse (verse for todat)
+            // Get latest verse
             let latest_sent_doc = await firestore.collection('sent').doc('latest').get();
             const latest_verse_id = latest_sent_doc.data().id;
             let verse = await firestore.collection('verses').doc(`${latest_verse_id}`).get();
-            let date = verse.data().date;
             let verseString = verse.data().verse;
-            //check if same day
-            if (date.toDate().setHours(0,0,0,0) == new Date().setHours(0,0,0,0)) {
-                //send verse
-                await fetchAndSendVerseLate(verseString, msg.from.id);
-            }            
+            await fetchAndSendLatest(verseString, msg.from.id);
         }
         else {            
             bot.sendMessage(msg.from.id, generateAlreadyRegisteredMessage(subscriptionSnapshot.data().name));
         }
     
     }
-    else if (msg.text == '/today') {
-        //send today's verse
+    else if (msg.text == '/latest') {
+        // Send the latest passage
         let latest_sent_doc = await firestore.collection('sent').doc('latest').get();
         const latest_verse_id = latest_sent_doc.data().id;
         let verse = await firestore.collection('verses').doc(`${latest_verse_id}`).get();
-        let date = verse.data().date;
         let verseString = verse.data().verse;
-        await fetchAndSendVerseLate(verseString, msg.from.id);
-        // if (date.toDate().setHours(0,0,0,0) == new Date().setHours(0,0,0,0)) {
-        // }            
+        await fetchAndSendLatest(verseString, msg.from.id);
     }
     else {
-        bot.sendMessage(msg.from.id, "Amen amen");
+        bot.sendMessage(msg.from.id, stuffPsMavisSays[Math.round(Math.random() * 3)]);
     }
 });
 
