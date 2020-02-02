@@ -18,6 +18,7 @@
   "homepage": "https://github.com/elliotmoose/velocity_telegram_bot#readme",
   "dependencies": {
     "dotenv": "^8.2.0",
+    "firebase-admin": "^8.9.2",
     "node-telegram-bot-api": "^0.40.0"
   }
 }
