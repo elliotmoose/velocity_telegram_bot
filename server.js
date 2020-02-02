@@ -152,9 +152,9 @@ bot.on('message', async (msg) => {
         let verse = await firestore.collection('verses').doc(`${latest_verse_id}`).get();
         let date = verse.data().date;
         let verseString = verse.data().verse;
-        if (date.toDate().setHours(0,0,0,0) == new Date().setHours(0,0,0,0)) {
-            await fetchAndSendVerseLate(verseString, msg.from.id);
-        }            
+        await fetchAndSendVerseLate(verseString, msg.from.id);
+        // if (date.toDate().setHours(0,0,0,0) == new Date().setHours(0,0,0,0)) {
+        // }            
     }
     else {
         bot.sendMessage(msg.from.id, "Amen amen");
