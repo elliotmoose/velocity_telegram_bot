@@ -19,6 +19,7 @@
   "dependencies": {
     "dotenv": "^8.2.0",
     "firebase-admin": "^8.9.2",
+    "node-fetch": "^2.6.0",
     "node-telegram-bot-api": "^0.40.0"
   }
 }
