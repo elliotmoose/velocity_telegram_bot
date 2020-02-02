@@ -54,12 +54,21 @@ const sendVerse = (verse, ids) => {
 fetchVerse("Matthew+2:1", all_ids);
 
 const getUsers = async () => {    
-        let snapshot = await firestore.collection("subscriptions").get();        
-        // var snapshot = await this.collection().get();
-        let users = [];
-        snapshot.forEach((user)=> {
-            users.push(user.data());
-        })    
+    let snapshot = await firestore.collection("subscriptions").get();        
+    let users = [];
+    snapshot.forEach((user)=> {
+        users.push(user.data());
+    })    
 
-        return users;
+    return users;
 }       
+
+const getVerses = async () => {
+    let snapshot = await firestore.collection("verses").get();        
+    let verses = [];
+    snapshot.forEach((verse)=> {
+        verses.push(verse.data());
+    })    
+
+    return verses;
+}
