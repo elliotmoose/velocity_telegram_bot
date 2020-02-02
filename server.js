@@ -12,24 +12,19 @@ firebase.initializeApp({
 
 const firestore = firebase.firestore();
 
-
-
 // replace the value below with the Telegram token you receive from @BotFather
 const token = process.env.TELEGRAM_TOKEN;
 const esvToken = process.env.ESV_TOKEN;
-// console.log(token);
 
-// // Create a bot that uses 'polling' to fetch new updates
+// Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, {polling: true});
 
 let joel_id = 123309697;
 let elliot_id = 536191264;
 
-
-
 let all_ids = [joel_id, elliot_id];
 
-const fetchVerse = async (verseString, ids) => {
+const fetchAndSendVerse = async (verseString, ids) => {
     let headerString = 'Token ' + esvToken;
     let response = await fetch('https://api.esv.org/v3/passage/text/?q=' + verseString + '&include-footnotes=false', {
         method: 'GET',
@@ -37,18 +32,11 @@ const fetchVerse = async (verseString, ids) => {
     })
     .then(res => res.json())
     .then(json => {
-        console.log(json.passages[0]);
+        // console.log(json.passages[0]);
         for(let id of ids) {
             bot.sendMessage(id, json.passages[0]);
         }
     });
-}
-
-const sendVerse = (verse, ids) => {
-    for(let id of ids) {
-        let message = "some verse";
-        bot.sendMessage(id, message);
-    }
 }
 
 const getUsers = async () => {    
@@ -65,7 +53,7 @@ const getVerses = async () => {
     let snapshot = await firestore.collection("verses").get();        
     let verses = [];
     snapshot.forEach((verse)=> {
-        verses.push(verse.data());
+        verses.push(verse);
     })    
 
     return verses;
@@ -82,13 +70,19 @@ const checkShouldSendVerse = async () => {
     let verses = await getVerses();
 
     for(let verseObj of verses) {
-        let is_past = true;
-        if(!verseObj.sent && is_past) {
+        let verse = verseObj.data();
+        let timeToSend = verse.date.toDate();
+        let is_past = Date.now() > timeToSend;
+        if(!verse.sent && is_past) {
             let users = await getUsers();
-            let chat_ids = users.map((user)=>user.chat_id);            
-            // console.log(verseObj.verse);
-            // console.log(chat_ids);
-            fetchVerse(verseObj.verse, chat_ids);            
+            let chat_ids = users.map((user)=>user.chat_id);
+            fetchAndSendVerse(verse.verse, chat_ids);
+            let docRef = firestore.collection("verses").doc(verseObj.id);
+            docRef.set({
+                date: verse.date,
+                sent: true,
+                verse: verse.verse
+            })
         }
     }
 }
