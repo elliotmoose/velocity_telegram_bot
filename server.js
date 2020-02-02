@@ -31,9 +31,27 @@ const bot = new TelegramBot(token, {polling: true});
 //   bot.sendMessage(chatId, 'Received your message');
 // });
 
-bot.on('message', (msg) => {
-    var Hi = "hi";
-    if (msg.text.toString().toLowerCase().indexOf(Hi) === 0) {
-        bot.sendMessage(msg.chat.id, "Hello dear user");
-    }  
-});
+let joel_id = 123309697;
+let elliot_id = 536191264;
+
+// bot.on('message', (msg) => {
+//     var Hi = "hi";
+//     if (msg.text.toString().toLowerCase().indexOf(Hi) === 0) {
+//         bot.sendMessage(msg.chat.id, "Hello dear user");
+//         console.log(msg.chat.id);
+//     }  
+// });
+
+let all_ids = [joel_id, elliot_id];
+
+
+const sendVerse = (verse, ids) => {
+    for(let id of ids) {
+        let message = "some verse";
+        bot.sendMessage(id, message);
+    }
+}
+
+sendVerse("hello",all_ids);
+
+
