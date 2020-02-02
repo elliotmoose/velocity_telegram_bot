@@ -24,19 +24,21 @@ let elliot_id = 536191264;
 
 let all_ids = [joel_id, elliot_id];
 
-const fetchAndSendVerse = async (verseString, ids) => {
+const fetchVerse = async (verseString) => {
     let headerString = 'Token ' + esvToken;
     let response = await fetch('https://api.esv.org/v3/passage/text/?q=' + verseString + '&include-footnotes=false', {
         method: 'GET',
         headers: { 'Authorization': headerString },
-    })
-    .then(res => res.json())
-    .then(json => {
-        // console.log(json.passages[0]);
-        for(let id of ids) {
-            bot.sendMessage(id, json.passages[0]);
-        }
     });
+
+    let json = await response.json();
+    return json.passages[0] || "";
+}
+
+const sendMessageToChats = (message, ids) => {
+    for(let id of ids) {
+        bot.sendMessage(id, message);
+    }
 }
 
 const getUsers = async () => {    
@@ -76,7 +78,8 @@ const checkShouldSendVerse = async () => {
         if(!verse.sent && is_past) {
             let users = await getUsers();
             let chat_ids = users.map((user)=>user.chat_id);
-            fetchAndSendVerse(verse.verse, chat_ids);
+            let verseText = fetchVerse(verse.verse);
+            sendMessageToChats(verseText, chat_ids);
             let docRef = firestore.collection("verses").doc(verseObj.id);
             docRef.set({
                 date: verse.date,
