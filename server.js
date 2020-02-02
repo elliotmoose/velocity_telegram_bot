@@ -25,18 +25,13 @@ const fetchAndSendVerse = async (verseString, users) => {
         method: 'GET',
         headers: { 'Authorization': headerString },
     })
-    .then(res => res.json())
-    .then(json => {
-        for(let user of users) {
-            let passage = json.passages[0];
-            let name = user.name;
-            let message = `Good morning ${name}! Here's the passage for today:\n\n` + passage;
-            bot.sendMessage(user.chat_id, message);
-        }
-    });
-
     let json = await response.json();
-    return json.passages[0] || "";
+    for(let user of users) {
+        let passage = json.passages[0];
+        let name = user.name;
+        let message = `Good morning ${name}! Here's the passage for today:\n\n` + passage;
+        bot.sendMessage(user.chat_id, message);
+    }    
 }
 
 const fetchAndSendVerseLate = async (verseString, id) => {
@@ -45,12 +40,10 @@ const fetchAndSendVerseLate = async (verseString, id) => {
         method: 'GET',
         headers: { 'Authorization': headerString },
     })
-    .then(res => res.json())
-    .then(json => {
-        let passage = json.passages[0];
-        let message = `Here's the passage for today:\n\n` + passage;
-        bot.sendMessage(id, message);
-    });
+    let json = await response.json();
+    let passage = json.passages[0];
+    let message = `Here's the passage for today:\n\n` + passage;
+    bot.sendMessage(id, message);    
 }
 
 const getUsers = async () => {    
@@ -89,61 +82,81 @@ const checkShouldSendVerse = async () => {
         let is_past = Date.now() > timeToSend;
         if(!verse.sent && is_past) {
             let users = await getUsers();
-            await fetchAndSendVerse(verse.verse, users)
-            .then(() => {
-                let docRef = firestore.collection("verses").doc(verseObj.id);
-                docRef.set({
-                    date: verse.date,
-                    sent: true,
-                    verse: verse.verse
-                })
-                .then(() => {
-                    firestore.collection("sent").doc("latest").set({
-                        id: verseObj.id
-                    })
-                })
-            });
+            
+            //send verse
+            await fetchAndSendVerse(verse.verse, users);
+
+            //update verse sent
+            let verseDocRef = firestore.collection("verses").doc(verseObj.id);
+            await verseDocRef.set({
+                date: verse.date,
+                sent: true,
+                verse: verse.verse
+            })
+
+            //update latest verse sent
+            firestore.collection("sent").doc("latest").set({
+                id: verseObj.id
+            })                            
         }
     }
 }
 
 const generateWelcomeMessage = (name) => {
-    return `What's up ${name}!!\n\nFor the next month, we're going to be reading the first few chapters of Matthew!\nI'll be sending you the verses we will be reading daily!`;
+    return `What's up ${name}!!\n\nFor this month, we're going to be reading the first five chapters of Matthew!\n\nI'll be sending you the verses we will be reading daily!`;
+}
+
+const generateAlreadyRegisteredMessage = (name) => {
+    return `Hello there ${name}, you are already registered. Type /today to get the verse of the day!`
 }
 
 // New User
-bot.on('message', (msg) => {
+bot.on('message', async (msg) => {
     if (msg.text == '/start') {
         let name = msg.from.first_name;
         let id = msg.from.id;
-        const subscription = firestore.collection('subscriptions').doc(`${id}`)
-        subscription.get()
-        .then((docSnapshot) => {
-            if (!docSnapshot.exists) {
-                subscription.set({
-                    chat_id: id,
-                    name: name
-                })
-                .then(() => {
-                    bot.sendMessage(msg.from.id, generateWelcomeMessage(name));
-                })
-                .then(() => {
-                    firestore.collection('sent').doc('latest').get()
-                    .then((doc) => {
-                        const id = doc.data().id;
-                        firestore.collection('verses').doc(`${id}`).get()
-                        .then((verse) => {
-                            let date = verse.data().date;
-                            let verseString = verse.data().verse;
-                            if (date.toDate().setHours(0,0,0,0) == new Date().setHours(0,0,0,0)) {
-                                fetchAndSendVerseLate(verseString, msg.from.id);
-                            }
-                        })
-                    });
-                })
-            }
-        });
-    } else {
+        let subscription = firestore.collection('subscriptions').doc(`${id}`);
+        let subscriptionSnapshot = await subscription.get();
+                
+        //check if already register
+        if (!subscriptionSnapshot.exists) {
+            await subscription.set({
+                chat_id: id,
+                name: name
+            })
+
+            //welcome message
+            await bot.sendMessage(msg.from.id, generateWelcomeMessage(name));            
+
+            //get latest verse (verse for todat)
+            let latest_sent_doc = await firestore.collection('sent').doc('latest').get();
+            const latest_verse_id = latest_sent_doc.data().id;
+            let verse = await firestore.collection('verses').doc(`${latest_verse_id}`).get();
+            let date = verse.data().date;
+            let verseString = verse.data().verse;
+            //check if same day
+            if (date.toDate().setHours(0,0,0,0) == new Date().setHours(0,0,0,0)) {
+                //send verse
+                await fetchAndSendVerseLate(verseString, msg.from.id);
+            }            
+        }
+        else {            
+            bot.sendMessage(msg.from.id, generateAlreadyRegisteredMessage(subscriptionSnapshot.data().name));
+        }
+    
+    }
+    else if (msg.text == '/today') {
+        //send today's verse
+        let latest_sent_doc = await firestore.collection('sent').doc('latest').get();
+        const latest_verse_id = latest_sent_doc.data().id;
+        let verse = await firestore.collection('verses').doc(`${latest_verse_id}`).get();
+        let date = verse.data().date;
+        let verseString = verse.data().verse;
+        if (date.toDate().setHours(0,0,0,0) == new Date().setHours(0,0,0,0)) {
+            await fetchAndSendVerseLate(verseString, msg.from.id);
+        }            
+    }
+    else {
         bot.sendMessage(msg.from.id, "Amen amen");
     }
 });
