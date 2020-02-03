@@ -68,36 +68,41 @@ const startScheduler = async () => {
     await checkShouldSendVerse();
     setInterval(async () => {
         await checkShouldSendVerse();
-    }, 5000);
+    }, 30*60*60*1000); //check every half hour
 }
 
-const checkShouldSendVerse = async () => {
-    let verses = await getVerses();
-
-    for (let verseObj of verses) {
-        let verse = verseObj.data();
-        let timeToSend = verse.date.toDate();
-        let is_past = Date.now() > timeToSend;
-        if(!verse.sent && is_past) {
-            let users = await getUsers();
-            
-            // Send verse
-            await fetchAndSendVerse(verse.verse, users);
-
-            // Update verse sent
-            let verseDocRef = firestore.collection("verses").doc(verseObj.id);
-            await verseDocRef.set({
-                date: verse.date,
-                sent: true,
-                verse: verse.verse
-            })
-
-            // Update latest verse sent
-            firestore.collection("sent").doc("latest").set({
-                id: verseObj.id
-            })                            
+const checkShouldSendVerse = async () => {    
+    try {
+        let verses = await getVerses();
+    
+        for (let verseObj of verses) {
+            let verse = verseObj.data();
+            let timeToSend = verse.date.toDate();                    
+            let is_past = new Date() > timeToSend;
+            if(!verse.sent && is_past) {
+                let users = await getUsers();
+                
+                // Send verse
+                await fetchAndSendVerse(verse.verse, users);
+    
+                // Update verse sent
+                let verseDocRef = firestore.collection("verses").doc(verseObj.id);
+                await verseDocRef.set({
+                    date: verse.date,
+                    sent: true,
+                    verse: verse.verse
+                })
+    
+                // Update latest verse sent
+                firestore.collection("sent").doc("latest").set({
+                    id: verseObj.id
+                })                            
+            }
         }
-    }
+        
+    } catch (error) {
+        console.log(error);
+    }   
 }
 
 const generateWelcomeMessage = (name) => {
