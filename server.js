@@ -12,7 +12,7 @@ firebase.initializeApp({
 const firestore = firebase.firestore();
 const token = process.env.TELEGRAM_TOKEN;
 const esvToken = process.env.ESV_TOKEN;
-const stuffPsMavisSays = ["Amen amen", "That's right", "Come on"];
+const stuffPsMavisSays = ["Amen amen", "That's right", "Come on", "So good", "Wassup people"];
 
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, {polling: true});
@@ -68,7 +68,7 @@ const startScheduler = async () => {
     await checkShouldSendVerse();
     setInterval(async () => {
         await checkShouldSendVerse();
-    }, 30*60*60*1000); //check every half hour
+    }, 30*60*1000); //check every half hour
 }
 
 const checkShouldSendVerse = async () => {    
@@ -152,7 +152,7 @@ bot.on('message', async (msg) => {
         await fetchAndSendLatest(verseString, msg.from.id);
     }
     else {
-        bot.sendMessage(msg.from.id, stuffPsMavisSays[Math.floor(Math.random() * 3)]);
+        bot.sendMessage(msg.from.id, stuffPsMavisSays[Math.floor(Math.random() * 5)]);
     }
 });
 
