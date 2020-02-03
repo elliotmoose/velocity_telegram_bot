@@ -152,7 +152,7 @@ bot.on('message', async (msg) => {
         await fetchAndSendLatest(verseString, msg.from.id);
     }
     else {
-        bot.sendMessage(msg.from.id, stuffPsMavisSays[Math.round(Math.random() * 3)]);
+        bot.sendMessage(msg.from.id, stuffPsMavisSays[Math.floor(Math.random() * 3)]);
     }
 });
 
