@@ -13,6 +13,7 @@ const firestore = firebase.firestore();
 const token = process.env.TELEGRAM_TOKEN;
 const esvToken = process.env.ESV_TOKEN;
 const stuffPsMavisSays = ["Amen amen", "That's right", "Come on", "So good", "Wassup people"];
+const feedbackRequestMessage = "Send me some feedback in your next message for me to improve! Else, type 'Cancel'.";
 
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, {polling: true});
@@ -151,8 +152,13 @@ bot.on('message', async (msg) => {
         let verseString = verse.data().verse;
         await fetchAndSendLatest(verseString, msg.from.id);
     }
+    else if (msg.text == '/feedback') {
+        // Send feedback request message
+        bot.sendMessage(msg.from.id, feedbackRequestMessage);
+        //TODO: force reply, save reply to firebase as feedback
+    }
     else {
-        bot.sendMessage(msg.from.id, stuffPsMavisSays[Math.floor(Math.random() * 5)]);
+        bot.sendMessage(msg.from.id, stuffPsMavisSays[Math.floor(Math.random() * stuffPsMavisSays.length)]);
     }
 });
 
