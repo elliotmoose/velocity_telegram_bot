@@ -14,6 +14,7 @@ const token = process.env.STAGING_TELEGRAM_TOKEN;
 const esvToken = process.env.ESV_TOKEN;
 const stuffPsMavisSays = ["Amen amen", "That's right", "Come on", "So good", "Wassup people"];
 const feedbackRequestMessage = "Send me some feedback in your next message for me to improve! Else, type 'Cancel'.";
+const testimonyRequestMessage = "Let's lift up the name of Jesus!! What would you like to thank him for? Else, type 'Cancel'.";
 
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, {polling: true});
@@ -97,6 +98,37 @@ const getAnnouncements = async () => {
     })
 }
 
+const getShoutHisName = async () => {
+    let latestRef = firestore.collection("shouthisname").doc("latest");
+    await latestRef.get()
+    .then((doc) => {
+        let next = doc.data().latest + 1;
+        let nextRef = firestore.collection("shouthisname").doc(`${next}`)
+        nextRef.get()
+        .then((doc) => {
+            if (doc.exists) {
+                let shouthisname = doc.data()
+                if (!shouthisname.sent && shouthisname.approved) {
+                    // Send to all users
+                    bot.sendMessage(JOEL_ID, shouthisname.message)
+                    .then(() => {
+                        nextRef.set({
+                            approved: true,
+                            message: shouthisname.message,
+                            sent: true
+                        })
+                        .then(() => {
+                            latestRef.set({
+                                latest: next
+                            })
+                        })
+                    })
+                }
+            }
+        })
+    })
+}
+
 const startScheduler = async () => {
     await checkShouldSendVerse();
     setInterval(async () => {
@@ -134,6 +166,7 @@ const checkShouldSendVerse = async () => {
         }
 
         getAnnouncements()
+        getShoutHisName()
         
     } catch (error) {
         console.log(error);
@@ -190,6 +223,11 @@ bot.on('message', async (msg) => {
         // Send feedback request message
         bot.sendMessage(msg.from.id, feedbackRequestMessage);
         //TODO: force reply, save reply to firebase as feedback
+    }
+    else if (msg.text == '/shouthisname') {
+        // Send testimony request message
+        bot.sendMessage(msg.from.id, testimonyRequestMessage);
+        //TODO: force reply, save reply to firebase as testimony
     }
     else {
         bot.sendMessage(msg.from.id, stuffPsMavisSays[Math.floor(Math.random() * stuffPsMavisSays.length)]);
