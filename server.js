@@ -10,13 +10,15 @@ firebase.initializeApp({
 });
 
 const firestore = firebase.firestore();
-const token = process.env.TELEGRAM_TOKEN;
+const token = process.env.STAGING_TELEGRAM_TOKEN;
 const esvToken = process.env.ESV_TOKEN;
 const stuffPsMavisSays = ["Amen amen", "That's right", "Come on", "So good", "Wassup people"];
 const feedbackRequestMessage = "Send me some feedback in your next message for me to improve! Else, type 'Cancel'.";
 
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, {polling: true});
+const ELLIOT_ID = 536191264;
+const JOEL_ID = 123309697;
 
 const fetchAndSendVerse = async (verseString, users) => {
     let headerString = 'Token ' + esvToken;
@@ -65,6 +67,36 @@ const getVerses = async () => {
     return verses;
 }
 
+const getAnnouncements = async () => {
+    let latestRef = firestore.collection("announcements").doc("latest");
+    await latestRef.get()
+    .then((doc) => {
+        let next = doc.data().latest + 1;
+        let nextRef = firestore.collection("announcements").doc(`${next}`)
+        nextRef.get()
+        .then((doc) => {
+            if (doc.exists) {
+                let announcement = doc.data()
+                if (!announcement.sent) {
+                    // Send to all users
+                    bot.sendMessage(JOEL_ID, announcement.message)
+                    .then(() => {
+                        nextRef.set({
+                            message: announcement.message,
+                            sent: true
+                        })
+                        .then(() => {
+                            latestRef.set({
+                                latest: next
+                            })
+                        })
+                    })
+                }
+            }
+        })
+    })
+}
+
 const startScheduler = async () => {
     await checkShouldSendVerse();
     setInterval(async () => {
@@ -100,6 +132,8 @@ const checkShouldSendVerse = async () => {
                 })                            
             }
         }
+
+        getAnnouncements()
         
     } catch (error) {
         console.log(error);
