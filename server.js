@@ -1,5 +1,6 @@
 const config = require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
+const Keyboard = require('node-telegram-keyboard-wrapper');
 const fetch = require('node-fetch');
 const firebase = require('firebase-admin');
 const serviceAccount = require('./velocitytelegrambot-firebase-adminsdk-6x8f4-03b6ed7bce.json');
@@ -23,8 +24,15 @@ const cancellationMessage = "SHORE!"
 
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, {polling: true});
+let admin_ids = [536191264/*elliot*/, 123309697/*joel*/];
 const ELLIOT_ID = 536191264;
 const JOEL_ID = 123309697;
+
+const [SHOUT_HIS_NAME_KEY, ANNOUNCEMENTS_KEY] = ['SHOUT_HIS_NAME_KEY', 'ANNOUNCEMENTS_KEY'];
+
+let manageKeyboard = new Keyboard.InlineKeyboard();
+manageKeyboard.addRow({text: 'Announcments', callback_data: ANNOUNCEMENTS_KEY}).addRow({text: 'Shout His Name', callback_data: SHOUT_HIS_NAME_KEY});
+
 
 const fetchAndSendVerse = async (verseString, users) => {
     let headerString = 'Token ' + esvToken;
@@ -194,7 +202,11 @@ bot.on('message', async (msg) => {
             expectingFeedback[`${msg.from.id}`] = 0;
             bot.sendMessage(msg.from.id, cancellationMessage);
         } else {
-            firestore.collection('feedback').doc().set({
+            let name = msg.from.first_name;
+            let user_id = msg.from.id;
+                firestore.collection('feedback').doc().set({
+                name,
+                user_id,
                 message: msg.text
             });
             expectingFeedback[`${msg.from.id}`] = 0;
@@ -206,12 +218,17 @@ bot.on('message', async (msg) => {
             expectingTestimony[`${msg.from.id}`] = 0;
             bot.sendMessage(msg.from.id, cancellationMessage);
         } else {
+            //keep track of last latest
             let latestRef = firestore.collection("shouthisname").doc("latest");
             await latestRef.get()
-            .then((doc) => {
+            .then((doc) => {lb
                 let next = doc.data().entry + 1;
+                let name = msg.from.first_name;
+                let user_id = msg.from.id;                
                 firestore.collection("shouthisname").doc(`${next}`).set({
                     approved: false,
+                    name,
+                    user_id,
                     message: msg.text,
                     sent: false
                 });
@@ -270,9 +287,37 @@ bot.on('message', async (msg) => {
         bot.sendMessage(msg.from.id, testimonyRequestMessage);
         expectingTestimony[`${msg.from.id}`] = 1;
     }
+    else if (msg.text == '/manage') {        
+        if(admin_ids.indexOf(msg.from.id) != -1) {
+            bot.sendMessage(msg.from.id, "What would you like to manage?", manageKeyboard.build());
+        }
+        else {            
+            bot.sendMessage(msg.from.id, "You do not have enough faith to run that command");
+        }
+    }
     else {
         bot.sendMessage(msg.from.id, stuffPsMavisSays[Math.floor(Math.random() * stuffPsMavisSays.length)]);
     }
+});
+
+bot.on("callback_query", (query) => {
+    switch (query.data) {
+        case ANNOUNCEMENTS_KEY:
+            //TODO: load announcements and reply                        
+            break;
+        case SHOUT_HIS_NAME_KEY:
+            // bot.sendMessage(query.from.id, "Sorry, I don't understand that action :( ");
+            //TODO: load testimonies and reply            
+            break;    
+        default:
+            bot.sendMessage(query.from.id, "Sorry, I don't understand that action :( ");
+            break;
+    }
+    //example: 
+    // bot.answerCallbackQuery(query.id, { text: "Action received!" })
+    //     .then(function () {
+    //     bot.sendMessage(query.from.id, "Hey there! You clicked on an inline button! ;) So, as you saw, the support library works!");
+    // });
 });
 
 startScheduler();
