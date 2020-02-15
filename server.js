@@ -12,9 +12,14 @@ firebase.initializeApp({
 const firestore = firebase.firestore();
 const token = process.env.STAGING_TELEGRAM_TOKEN;
 const esvToken = process.env.ESV_TOKEN;
+let expectingFeedback = {}
+let expectingTestimony = {}
 const stuffPsMavisSays = ["Amen amen", "That's right", "Come on", "So good", "Wassup people"];
-const feedbackRequestMessage = "Send me some feedback in your next message for me to improve! Else, type 'Cancel'.";
-const testimonyRequestMessage = "Let's lift up the name of Jesus!! What would you like to thank him for? Else, type 'Cancel'.";
+const feedbackRequestMessage = "What other things would you like me to able to do in future? Send me some feedback in your next message! Your feedback will remain anonymous. To cancel this operation, send 'Cancel'.";
+const feedbackReceivedMessage = "Thank you for your suggestion!"
+const testimonyRequestMessage = "Let's lift up the name of Jesus!! What would you like to thank him for? Your testimony will be reviewed by an admin before it will be broadcast to all subscribers! To cancel this operation, type 'Cancel'.";
+const testimonyReceivedMessage = "Amen amen!! Thank you for sharing that with us!"
+const cancellationMessage = "SHORE!"
 
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, {polling: true});
@@ -99,34 +104,35 @@ const getAnnouncements = async () => {
 }
 
 const getShoutHisName = async () => {
-    let latestRef = firestore.collection("shouthisname").doc("latest");
-    await latestRef.get()
-    .then((doc) => {
-        let next = doc.data().latest + 1;
-        let nextRef = firestore.collection("shouthisname").doc(`${next}`)
-        nextRef.get()
-        .then((doc) => {
-            if (doc.exists) {
-                let shouthisname = doc.data()
-                if (!shouthisname.sent && shouthisname.approved) {
-                    // Send to all users
-                    bot.sendMessage(JOEL_ID, shouthisname.message)
-                    .then(() => {
-                        nextRef.set({
-                            approved: true,
-                            message: shouthisname.message,
-                            sent: true
-                        })
-                        .then(() => {
-                            latestRef.set({
-                                latest: next
-                            })
-                        })
-                    })
-                }
-            }
-        })
-    })
+// TODO: check sent
+//     let latestRef = firestore.collection("shouthisname").doc("latest");
+//     await latestRef.get()
+//     .then((doc) => {
+//         let next = doc.data().latest + 1;
+//         let nextRef = firestore.collection("shouthisname").doc(`${next}`)
+//         nextRef.get()
+//         .then((doc) => {
+//             if (doc.exists) {
+//                 let shouthisname = doc.data()
+//                 if (!shouthisname.sent && shouthisname.approved) {
+//                     // Send to all users
+//                     bot.sendMessage(JOEL_ID, shouthisname.message)
+//                     .then(() => {
+//                         nextRef.set({
+//                             approved: true,
+//                             message: shouthisname.message,
+//                             sent: true
+//                         })
+//                         .then(() => {
+//                             latestRef.set({
+//                                 latest: next
+//                             })
+//                         })
+//                     })
+//                 }
+//             }
+//         })
+//     })
 }
 
 const startScheduler = async () => {
@@ -183,7 +189,42 @@ const generateAlreadyRegisteredMessage = (name) => {
 
 // New User
 bot.on('message', async (msg) => {
-    if (msg.text == '/start') {
+    if (expectingFeedback[`${msg.from.id}`] == 1) {
+        if (msg.text == 'Cancel') {
+            expectingFeedback[`${msg.from.id}`] = 0;
+            bot.sendMessage(msg.from.id, cancellationMessage);
+        } else {
+            firestore.collection('feedback').doc().set({
+                message: msg.text
+            });
+            expectingFeedback[`${msg.from.id}`] = 0;
+            bot.sendMessage(msg.from.id, feedbackReceivedMessage);
+        }
+    }
+    else if (expectingTestimony[`${msg.from.id}`] == 1) {
+        if (msg.text == 'Cancel') {
+            expectingTestimony[`${msg.from.id}`] = 0;
+            bot.sendMessage(msg.from.id, cancellationMessage);
+        } else {
+            let latestRef = firestore.collection("shouthisname").doc("latest");
+            await latestRef.get()
+            .then((doc) => {
+                let next = doc.data().entry + 1;
+                firestore.collection("shouthisname").doc(`${next}`).set({
+                    approved: false,
+                    message: msg.text,
+                    sent: false
+                });
+                latestRef.set({
+                    entry: next,
+                    sent: doc.data().sent
+                })
+            })
+            expectingTestimony[`${msg.from.id}`] = 0;
+            bot.sendMessage(msg.from.id, testimonyReceivedMessage);
+        }
+    }
+    else if (msg.text == '/start') {
         let name = msg.from.first_name;
         let id = msg.from.id;
         let subscription = firestore.collection('subscriptions').doc(`${id}`);
@@ -220,14 +261,14 @@ bot.on('message', async (msg) => {
         await fetchAndSendLatest(verseString, msg.from.id);
     }
     else if (msg.text == '/feedback') {
-        // Send feedback request message
+        // Send feedback request message, flag user as 
         bot.sendMessage(msg.from.id, feedbackRequestMessage);
-        //TODO: force reply, save reply to firebase as feedback
+        expectingFeedback[`${msg.from.id}`] = 1;
     }
     else if (msg.text == '/shouthisname') {
         // Send testimony request message
         bot.sendMessage(msg.from.id, testimonyRequestMessage);
-        //TODO: force reply, save reply to firebase as testimony
+        expectingTestimony[`${msg.from.id}`] = 1;
     }
     else {
         bot.sendMessage(msg.from.id, stuffPsMavisSays[Math.floor(Math.random() * stuffPsMavisSays.length)]);
