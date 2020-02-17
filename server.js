@@ -22,13 +22,16 @@ const testimonyRequestMessage = "Let's lift up the name of Jesus!! What would yo
 const testimonyReceivedMessage = "Amen amen!! Thank you for sharing that with us!"
 const cancellationMessage = "SHORE!"
 
+const manageHomeMessage = "What would you like to manage?";
+const shoutHisNameViewTestimonyMessage = "Select a testimony to view.";
+
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, {polling: true});
 let admin_ids = [536191264/*elliot*/, 123309697/*joel*/];
 const ELLIOT_ID = 536191264;
 const JOEL_ID = 123309697;
 
-const [SHOUT_HIS_NAME_KEY, ANNOUNCEMENTS_KEY] = ['SHOUT_HIS_NAME_KEY', 'ANNOUNCEMENTS_KEY'];
+const [MANAGE_HOME_KEY, ANNOUNCEMENTS_KEY, SHOUT_HIS_NAME_KEY, VIEW_TESTIMONY_KEY, APPROVE_TESTIMONY_KEY, REJECT_TESTIMONY_KEY] = ['MANAGE_HOME_KEY', 'ANNOUNCEMENTS_KEY','SHOUT_HIS_NAME_KEY',  'VIEW_TESTIMONY_KEY', 'APPROVE_TESTIMONY_KEY', 'REJECT_TESTIMONY_KEY'];
 
 let manageKeyboard = new Keyboard.InlineKeyboard();
 manageKeyboard.addRow({text: 'Announcments', callback_data: ANNOUNCEMENTS_KEY}).addRow({text: 'Shout His Name', callback_data: SHOUT_HIS_NAME_KEY});
@@ -71,7 +74,7 @@ const getUsers = async () => {
     return users;
 }       
 
-const getVerses = async () => {
+const getVerseReferences = async () => {
     let snapshot = await firestore.collection("verses").get();        
     let verses = [];
     snapshot.forEach((verse)=> {
@@ -79,6 +82,20 @@ const getVerses = async () => {
     })    
 
     return verses;
+}
+
+const getTestimony = async (id) => {
+    let docRef = await firestore.collection("shouthisname").doc(id).get();        
+    return docRef.data();
+}
+const getTestimonyReferences = async () => {
+    let snapshot = await firestore.collection("shouthisname").get();        
+    let testimonies = [];
+    snapshot.forEach((testimony)=> {
+        testimonies.push(testimony);
+    })    
+
+    return testimonies;
 }
 
 const getAnnouncements = async () => {
@@ -152,7 +169,7 @@ const startScheduler = async () => {
 
 const checkShouldSendVerse = async () => {    
     try {
-        let verses = await getVerses();
+        let verses = await getVerseReferences();
     
         for (let verseObj of verses) {
             let verse = verseObj.data();
@@ -221,7 +238,7 @@ bot.on('message', async (msg) => {
             //keep track of last latest
             let latestRef = firestore.collection("shouthisname").doc("latest");
             await latestRef.get()
-            .then((doc) => {lb
+            .then((doc) => {
                 let next = doc.data().entry + 1;
                 let name = msg.from.first_name;
                 let user_id = msg.from.id;                
@@ -289,7 +306,7 @@ bot.on('message', async (msg) => {
     }
     else if (msg.text == '/manage') {        
         if(admin_ids.indexOf(msg.from.id) != -1) {
-            bot.sendMessage(msg.from.id, "What would you like to manage?", manageKeyboard.build());
+            bot.sendMessage(msg.from.id, manageHomeMessage, manageKeyboard.build());
         }
         else {            
             bot.sendMessage(msg.from.id, "You do not have enough faith to run that command");
@@ -300,24 +317,83 @@ bot.on('message', async (msg) => {
     }
 });
 
-bot.on("callback_query", (query) => {
+bot.on("callback_query", async (query) => {
     switch (query.data) {
+        case MANAGE_HOME_KEY: 
+            bot.editMessageText(manageHomeMessage, {
+                chat_id: query.from.id,
+                message_id: query.message.message_id,
+                reply_markup: manageKeyboard.extract()
+            });
+
+            break;
         case ANNOUNCEMENTS_KEY:
             //TODO: load announcements and reply                        
             break;
         case SHOUT_HIS_NAME_KEY:
-            // bot.sendMessage(query.from.id, "Sorry, I don't understand that action :( ");
-            //TODO: load testimonies and reply            
+            let shnKeyboard = new Keyboard.InlineKeyboard();
+            
+            //1. get testimonies
+            let testimonyReferences = await getTestimonyReferences();
+
+            //2. build testimony keyboard
+            testimonyReferences.forEach((testimonyRef)=>{
+                let testimony = testimonyRef.data();
+                if(!testimony.name || !testimony.user_id) {
+                    return;
+                }
+
+                let option = {
+                    text: testimony.name,
+                    callback_data: VIEW_TESTIMONY_KEY + testimonyRef.id
+                };
+
+                shnKeyboard.addRow(option);
+            });
+            
+            shnKeyboard.addRow({
+                text: 'Back <<<',
+                callback_data: MANAGE_HOME_KEY
+            });
+
+            bot.editMessageText(shoutHisNameViewTestimonyMessage, {
+                chat_id: query.from.id,
+                message_id: query.message.message_id,
+                reply_markup: shnKeyboard.extract()
+            });
             break;    
         default:
+
+            //check for testimony viewing
+            let key_index = query.data.indexOf(VIEW_TESTIMONY_KEY);
+            if(key_index != -1) {
+                console.log(key_index);
+                //get testimony and send back
+                let testimony_id = query.data.replace(VIEW_TESTIMONY_KEY, "");
+                let testimony = await getTestimony(testimony_id);
+
+                if(testimony) {
+                    let approvalKeyboard = new Keyboard.InlineKeyboard();
+                    approvalKeyboard.addRow({text: 'Approve', callback_data: APPROVE_TESTIMONY_KEY + testimony_id});                    
+                    approvalKeyboard.addRow({text: 'Reject', callback_data: REJECT_TESTIMONY_KEY + testimony_id});                    
+                    approvalKeyboard.addRow({text: 'Back <<<', callback_data: SHOUT_HIS_NAME_KEY});                    
+                    let message = `${testimony.message}\n\n from: ${testimony.name}`;
+                    bot.editMessageText(message, {
+                        chat_id: query.from.id,
+                        message_id: query.message.message_id,
+                        reply_markup: approvalKeyboard.extract()
+                    });
+                }
+                else {
+                    bot.sendMessage(query.from.id, `That testimony with id ${testimony_id} no longer exists`);
+                }
+
+                return;
+            }
+            
             bot.sendMessage(query.from.id, "Sorry, I don't understand that action :( ");
             break;
     }
-    //example: 
-    // bot.answerCallbackQuery(query.id, { text: "Action received!" })
-    //     .then(function () {
-    //     bot.sendMessage(query.from.id, "Hey there! You clicked on an inline button! ;) So, as you saw, the support library works!");
-    // });
 });
 
 startScheduler();
