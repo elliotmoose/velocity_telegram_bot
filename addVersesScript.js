@@ -72,7 +72,7 @@ fs.readFile('versesToAdd.txt', async (err, data) => {
             console.log(firebase.firestore.Timestamp.fromDate(new Date(date + " " + currMonth + " 2020 07:00:00 GMT+8")))
             // UNCOMMENT TO ADD
             // firestore.collection("verses").doc().set({
-            //     date: firestore.Timestamp.fromDate(new Date(date)),
+            //     date: firestore.Timestamp.fromDate(new Date(date + " " + currMonth + " 2020 07:00:00 GMT+8")),
             //     sent: false,
             //     verse: verse
             // })   
