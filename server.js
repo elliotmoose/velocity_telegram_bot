@@ -74,7 +74,7 @@ const getAnnouncements = async () => {
         let next = doc.data().latest + 1;
         let nextRef = firestore.collection("announcements").doc(`${next}`)
         nextRef.get()
-        .then((doc) => {
+        .then(async (doc) => {
             if (doc.exists) {
                 let announcement = doc.data()
                 if (!announcement.sent) {
