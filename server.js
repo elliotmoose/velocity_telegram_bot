@@ -29,9 +29,10 @@ const shoutHisNameViewTestimonyMessage = "Select a testimony to view.";
 
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, {polling: true});
-let admin_ids = [536191264/*elliot*/, 123309697/*joel*/];
+let admin_ids = [536191264/*elliot*/, 123309697/*joel*/, 192664082/*adriel*/];
 const ELLIOT_ID = 536191264;
 const JOEL_ID = 123309697;
+const ADRIEL_ID = 192664082;
 
 const [MANAGE_HOME_KEY, ANNOUNCEMENTS_KEY, SHOUT_HIS_NAME_KEY, VIEW_TESTIMONY_KEY, APPROVE_TESTIMONY_KEY, REJECT_TESTIMONY_KEY] = ['MANAGE_HOME_KEY', 'ANNOUNCEMENTS_KEY','SHOUT_HIS_NAME_KEY',  'VIEW_TESTIMONY_KEY', 'APPROVE_TESTIMONY_KEY', 'REJECT_TESTIMONY_KEY'];
 
