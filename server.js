@@ -105,13 +105,13 @@ const setLivestream = async (newlink, id) => {
             await firestore.collection("announcements").doc("livestream").get().then((doc) => {
                 newlink = doc.data().link;
             });
-            // let users = await getUsers();
-            // for(let user of users) {
-            //     bot.sendMessage(user.chat_id, livestreamMessage + newlink);
-            // }
-            for (let id of admin_ids) {
-                bot.sendMessage(id, livestreamMessage + newlink);
+            let users = await getUsers();
+            for(let user of users) {
+                bot.sendMessage(user.chat_id, livestreamMessage + newlink);
             }
+            // for (let id of admin_ids) {
+            //     bot.sendMessage(id, livestreamMessage + newlink);
+            // }
         }
         else {
             bot.sendMessage(id, "Unknown flag");
