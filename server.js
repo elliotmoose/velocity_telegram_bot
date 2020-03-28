@@ -25,7 +25,7 @@ let expectingTestimony = {}
 let expectingAnnouncement = {}
 
 // default messages
-const stuffPsMavisSays = ["Amen amen", "That's right", "Come on", "So good", "Wassup people"];
+const stuffPsMavisSays = ["Amen amen", "That's right", "Come on", "So good", "Wassup people", "Take a look at the stage", "Young people"];
 const feedbackRequestMessage = "What other things would you like me to able to do in future? Send me some feedback in your next message! Your feedback will remain anonymous. To cancel this operation, send 'Cancel'.";
 const feedbackReceivedMessage = "Thank you for your suggestion!"
 const testimonyRequestMessage = "Let's lift up the name of Jesus!! What would you like to thank him for? Your testimony will be reviewed by an admin before it will be broadcast to all subscribers! To cancel this operation, type 'Cancel'.";
@@ -33,7 +33,8 @@ const testimonyReceivedMessage = "Amen amen!! Thank you for sharing that with us
 const cancellationMessage = "SHORE!"
 
 const manageHomeMessage = "What would you like to manage?";
-const annuoncementRequestMessage = "Send me the announcement you want to broadcast.";
+const typeOfAnnouncementMessage = "What kind of announcement would you like to create?";
+const annuoncementRequestMessage = "Send me the announcement you want to broadcast (text, photo, and video accepted but captions don't work)";
 const shoutHisNameViewTestimonyMessage = "Select a testimony to view.";
 
 // Create a bot that uses 'polling' to fetch new updates
@@ -43,12 +44,11 @@ const ELLIOT_ID = 536191264;
 const JOEL_ID = 123309697;
 const ADRIEL_ID = 192664082;
 
-// not too sure what this is
-const [MANAGE_HOME_KEY, ANNOUNCEMENTS_KEY, SHOUT_HIS_NAME_KEY, VIEW_TESTIMONY_KEY, APPROVE_TESTIMONY_KEY, REJECT_TESTIMONY_KEY] = ['MANAGE_HOME_KEY', 'ANNOUNCEMENTS_KEY','SHOUT_HIS_NAME_KEY',  'VIEW_TESTIMONY_KEY', 'APPROVE_TESTIMONY_KEY', 'REJECT_TESTIMONY_KEY'];
-
-// inline keyboard setup
-let manageKeyboard = new Keyboard.InlineKeyboard();
-manageKeyboard.addRow({text: 'Make an Announcement', callback_data: ANNOUNCEMENTS_KEY}).addRow({text: 'Shout His Name', callback_data: SHOUT_HIS_NAME_KEY});
+// inline keyboard keys
+// IMPT NOTE: keys can only be one char long. the rest of the callback data string is used for other data
+// access the key with query.data[0];    -- takes the 1st char
+// access the data with query.slice(1);  -- slices the rest of the string
+const [MANAGE_HOME_KEY, ANNOUNCEMENTS_KEY, SHOUT_HIS_NAME_KEY, VIEW_TESTIMONY_KEY, APPROVE_TESTIMONY_KEY, REJECT_TESTIMONY_KEY, NOW_ANNOUNCMENTS_KEY, SCHEDULED_ANNOUNCEMENTS_KEY] = ['0', '1','2', '3', '4', '5', '6', '7'];
 
 
 
@@ -75,29 +75,6 @@ const generateWelcomeMessage = (name) => {
 
 const generateAlreadyRegisteredMessage = (name) => {
     return `Hello there ${name}, you are already registered. Type /latest to get the verse of the day!`
-}
-
-const extractIDFromCallbackData = (data, type) => {
-    return data.replace(type, "");
-}
-
-const extractTypeFromCallbackData = (data) => {
-    let messageTypes = [VIEW_TESTIMONY_KEY, APPROVE_TESTIMONY_KEY, REJECT_TESTIMONY_KEY];
-    for(let type of messageTypes) {
-        if(data.indexOf(type) != -1) {
-            return type;
-        }
-    }
-
-    return null;
-}
-
-const editInlineKeyboard = (query, newMessage, newKeyboard) => {
-    bot.editMessageText(newMessage, {
-        chat_id: query.from.id,
-        message_id: query.message.message_id,
-        reply_markup: newKeyboard
-    });
 }
 
 // verse and /latest
@@ -187,6 +164,42 @@ const getShoutHisName = async () => {
 }
 
 // /announcements
+const sendOutAnnouncement = async (msg) => {
+ 	// TODO: switch from admin to all
+
+ 	for(let id of admin_ids) {
+        if(msg.text != null) {
+        	bot.sendMessage(id, msg.text);
+        }
+        else if (msg.photo != null) {
+        	bot.sendPhoto(id, msg.photo[0].file_id);
+        }
+        else if (msg.video != null) {
+        	bot.sendVideo(id, msg.video.file_id, caption=msg.caption);
+        }
+    }
+}
+
+const saveAnnouncementToFirebase = async (text) => {
+	if(text == null) {
+		console.log("TODOO: backup image and video announcements too")
+	}
+
+	let biggestRef = firestore.collection("announcements").doc("biggestnumber");
+    await biggestRef.get()
+    .then((doc) => {
+        let next = doc.data().biggestnumber + 1;
+        biggestRef.set({
+        	biggestnumber: next
+        })
+
+        firestore.collection("announcements").doc(`${next}`).set({
+        	message: text,	
+        	sent: true
+        })
+    })
+}
+
 const getAnnouncements = async () => {
     let latestRef = firestore.collection("announcements").doc("latest");
     await latestRef.get()
@@ -215,6 +228,26 @@ const getAnnouncements = async () => {
             }
         })
     })
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////
+//                                                                        //
+//                             Inline Keyboards                           //
+//                                                                        //
+////////////////////////////////////////////////////////////////////////////
+
+let manageKeyboard = new Keyboard.InlineKeyboard();
+manageKeyboard.addRow({text: 'Make an Announcement', callback_data: ANNOUNCEMENTS_KEY})
+			.addRow({text: 'Shout His Name', callback_data: SHOUT_HIS_NAME_KEY});
+
+const editInlineKeyboard = (query, newMessage, newKeyboard) => {
+    bot.editMessageText(newMessage, {
+        chat_id: query.from.id,
+        message_id: query.message.message_id,
+        reply_markup: newKeyboard
+    });
 }
 
 
@@ -329,9 +362,14 @@ bot.on('message', async (msg) => {
         }
         else {
             //announcement
-            console.log(`TODO: make announcement ${msg.text}`);
-            bot.sendMessage(msg.from.id, "announcement received.");
-            expectingTestimony[`${msg.from.id}`] = 0;
+            expectingAnnouncement[`${msg.from.id}`] = 0;
+            sendOutAnnouncement(msg);
+            bot.sendMessage(msg.from.id, "Your announcement has been sent!");
+
+            if (msg.text != null) {
+            	saveAnnouncementToFirebase(msg.text);
+            	bot.sendMessage(msg.from.id, "Your announcement has been saved to firebase.")
+        	}
         }
     }
     else if (msg.text == '/start') {
@@ -394,17 +432,20 @@ bot.on('message', async (msg) => {
 });
 
 bot.on("callback_query", async (query) => {
-    switch (query.data) {
+    switch (query.data[0]) {
         case MANAGE_HOME_KEY: 
             editInlineKeyboard(query, manageHomeMessage, manageKeyboard.extract());
             break;
+
         case ANNOUNCEMENTS_KEY:
             expectingAnnouncement[`${query.from.id}`] = 1;
             // bot.sendMessage(query.from.id, annuoncementRequestMessage);                      
             let announcementKeyboard = new Keyboard.InlineKeyboard();
-            announcementKeyboard.addRow({ text: 'Cancel', callback_data: MANAGE_HOME_KEY });
-            editInlineKeyboard(query, annuoncementRequestMessage, announcementKeyboard.extract());
+            announcementKeyboard.addRow({ text: '<< Back', callback_data: MANAGE_HOME_KEY });
+            announcementKeyboard.addRow({text: 'Send out now', callback_data: NOW_ANNOUNCMENTS_KEY});
+            editInlineKeyboard(query, typeOfAnnouncementMessage, announcementKeyboard.extract());
             break;
+
         case SHOUT_HIS_NAME_KEY:
             let shnKeyboard = new Keyboard.InlineKeyboard();
             
@@ -427,64 +468,54 @@ bot.on("callback_query", async (query) => {
             });
             
             shnKeyboard.addRow({
-                text: 'Back <<<',
+                text: '<< Back',
                 callback_data: MANAGE_HOME_KEY
             });
             editInlineKeyboard(query, shoutHisNameViewTestimonyMessage, shnKeyboard.extract());
-            break;    
-        default:
-            
-            let keyType = extractTypeFromCallbackData(query.data); 
-            if(keyType) {
-                switch (keyType) {
-                    case VIEW_TESTIMONY_KEY:
-                        {
-                            //get testimony and send back
-                            let testimony_id = extractIDFromCallbackData(query.data, VIEW_TESTIMONY_KEY);
-                            let testimony = await getTestimony(testimony_id);
+            break;   
 
-                            if (testimony) {
-                                let approvalKeyboard = new Keyboard.InlineKeyboard();
-                                approvalKeyboard.addRow({ text: 'Approve', callback_data: APPROVE_TESTIMONY_KEY + testimony_id });
-                                approvalKeyboard.addRow({ text: 'Reject', callback_data: REJECT_TESTIMONY_KEY + testimony_id });
-                                approvalKeyboard.addRow({ text: 'Back <<<', callback_data: SHOUT_HIS_NAME_KEY });
-                                let message = `${testimony.message}\n\n from: ${testimony.name}`;
-                                editInlineKeyboard(query, message, approvalKeyboard.extract());
-                            }
-                            else {
-                                bot.sendMessage(query.from.id, `That testimony with id ${testimony_id} no longer exists`);
-                            }
-                            
-                            break;
-                        }
-                    case APPROVE_TESTIMONY_KEY:
-                        {
-                            let testimony_id = extractIDFromCallbackData(query.data, APPROVE_TESTIMONY_KEY);
-                            let approvedKeyboard = new Keyboard.InlineKeyboard();
-                            approvedKeyboard.addRow({ text: 'Back to Testimonies', callback_data: SHOUT_HIS_NAME_KEY });
-                            console.log(`Approve testimony with id: ${testimony_id}`);
-                            let message = "Testimony Approved!"
-                            editInlineKeyboard(query, message, approvedKeyboard.extract());
-                            break;
-                        }
-                    case REJECT_TESTIMONY_KEY:
-                        {
-                            let testimony_id = extractIDFromCallbackData(query.data, REJECT_TESTIMONY_KEY);
-                            console.log(`Rejected testimony with id: ${testimony_id}`);
-                            let rejectedKeyboard = new Keyboard.InlineKeyboard();
-                            rejectedKeyboard.addRow({ text: 'Back to Testimonies', callback_data: SHOUT_HIS_NAME_KEY });
-                            let message = "Testimony Rejected!"
-                            editInlineKeyboard(query, message, rejectedKeyboard.extract());
-                            break;
-                        }
-                    default:
-                        break;
-                }
+        case VIEW_TESTIMONY_KEY:{
+            //get testimony and send back
+            let testimony_id = query.data.slice(1);
+            let testimony = await getTestimony(testimony_id);
+
+            if (testimony) {
+                let approvalKeyboard = new Keyboard.InlineKeyboard();
+                approvalKeyboard.addRow({ text: 'Approve', callback_data: APPROVE_TESTIMONY_KEY + testimony_id });
+                approvalKeyboard.addRow({ text: 'Reject', callback_data: REJECT_TESTIMONY_KEY + testimony_id });
+                approvalKeyboard.addRow({ text: '<< Back to Testimonies', callback_data: SHOUT_HIS_NAME_KEY });
+                let message = `${testimony.message}\n\n from: ${testimony.name}`;
+                editInlineKeyboard(query, message, approvalKeyboard.extract());
             }
             else {
-                bot.sendMessage(query.from.id, "Sorry, I don't understand that action :( ");
+                bot.sendMessage(query.from.id, `That testimony with id ${testimony_id} no longer exists`);
             }
+            
+            break;
+        }
 
+	    case APPROVE_TESTIMONY_KEY:{
+            let testimony_id = query.data.slice(1);
+            let approvedKeyboard = new Keyboard.InlineKeyboard();
+            approvedKeyboard.addRow({ text: '<< Back to Testimonies', callback_data: SHOUT_HIS_NAME_KEY });
+            console.log(`Approve testimony with id: ${testimony_id}`);
+            let message = "Testimony Approved!"
+            editInlineKeyboard(query, message, approvedKeyboard.extract());
+            break;
+        }
+
+	    case REJECT_TESTIMONY_KEY:{
+            let testimony_id = query.data.slice(1);
+            console.log(`Rejected testimony with id: ${testimony_id}`);
+            let rejectedKeyboard = new Keyboard.InlineKeyboard();
+            rejectedKeyboard.addRow({ text: '<< Back to Testimonies', callback_data: SHOUT_HIS_NAME_KEY });
+            let message = "Testimony Rejected!"
+            editInlineKeyboard(query, message, rejectedKeyboard.extract());
+            break;
+        }
+
+        default:
+            bot.sendMessage(query.from.id, "Sorry, I don't understand that action :( ");
             break;
     }
 });
