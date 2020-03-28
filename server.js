@@ -20,9 +20,18 @@ const token = process.env.STAGING_TELEGRAM_TOKEN;
 const esvToken = process.env.ESV_TOKEN;
 
 // initialize expecting objects
+// expecting feedback/testimony/announcement are used like boolean dictionaries, with the chat_id being the key, and a boolean being the element
 let expectingFeedback = {}
 let expectingTestimony = {}
 let expectingAnnouncement = {}
+
+// expecting scheduled maps the id to a string with the following very exact requirements:
+// 0: Stage (1 - waiting for date, 2 - waiting for time, 3 - waiting for announcement)
+// 1: Space
+// 2-7: DDMMYY of scheduled announcement eg 251220 is Christmas 2020
+// 8: Space
+// 9-12: HHMM of scheduled announcement (24 hrs) eg 2359
+let expectingScheduled = {}
 
 // default messages
 const stuffPsMavisSays = ["Amen amen", "That's right", "Come on", "So good", "Wassup people", "Take a look at the stage", "Young people"];
@@ -34,8 +43,10 @@ const cancellationMessage = "SHORE!"
 
 const manageHomeMessage = "What would you like to manage?";
 const typeOfAnnouncementMessage = "What kind of announcement would you like to create?";
-const annuoncementRequestMessage = "Send me the announcement you want to broadcast (text, photo, and video accepted but captions don't work)";
+const announcementRequestMessage = "Send me the announcement you want to broadcast\n\n(text, photo, and video accepted but captions don't work)";
 const shoutHisNameViewTestimonyMessage = "Select a testimony to view.";
+const scheduledDateMessage = "Send scheduled date to send announcement\n\n(enter in DDMMYY format eg 020620)";
+const scheduledTimeMessage = "Send scheduled time to send announcement\n\n(enter in 24 hr HHMM format eg 2359)\n(/back to change date)";
 
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, {polling: true});
@@ -75,6 +86,21 @@ const generateWelcomeMessage = (name) => {
 
 const generateAlreadyRegisteredMessage = (name) => {
     return `Hello there ${name}, you are already registered. Type /latest to get the verse of the day!`
+}
+
+const generateScheduleMessage = (date, time) => {
+	return `Finally, send the announcement you want to schedule.\nDate: ${date}\nTime:${time}\n(Only text works)\n(/back to change time)`
+}
+
+const getDate = (data) => {
+	// 0: Stage (1 - waiting for date, 2 - waiting for time, 3 - waiting for announcement)
+	// 1: Space
+	// 2-7: DDMMYY of scheduled announcement eg 251220 is Christmas 2020
+	// 8: Space
+	// 9-12: HHMM of scheduled announcement (24 hrs) eg 2359
+
+	let dateString = '20' + data.slice(6, 8) + '-' + data.slice(4,6) + '-' + data.slice(2,4) + 'T' + data.slice(9,11) + ':' + data.slice(11) + ':00';
+	return new Date(dateString);
 }
 
 // verse and /latest
@@ -180,7 +206,7 @@ const sendOutAnnouncement = async (msg) => {
     }
 }
 
-const saveAnnouncementToFirebase = async (text) => {
+const saveAnnouncementToFirebase = async (text, dateInfo) => {
 	if(text == null) {
 		console.log("TODOO: backup image and video announcements too")
 	}
@@ -194,9 +220,11 @@ const saveAnnouncementToFirebase = async (text) => {
         })
 
         firestore.collection("announcements").doc(`${next}`).set({
-        	message: text,	
+        	message: text,
+        	date: dateInfo,
         	sent: true
         })
+        return next;
     })
 }
 
@@ -254,7 +282,7 @@ const editInlineKeyboard = (query, newMessage, newKeyboard) => {
 
 ////////////////////////////////////////////////////////////////////////////
 //                                                                        //
-//                                 Scheduler                              //
+//                                Schedulers                              //
 //                                                                        //
 ////////////////////////////////////////////////////////////////////////////
 
@@ -302,6 +330,31 @@ const checkShouldSendVerse = async () => {
     }   
 }
 
+const scheduleAnnouncement = async(id, msgtext, timeToSend, fromId) => {
+	let now = new Date();
+
+	if (now > timeToSend) {
+		// Someone tried to schedule something in the past
+		bot.sendMessage(fromId, "Nice try. Please schedule something in the future. Or use immediate announcements to post them right now.");
+		return;
+	}
+	else {
+		bot.sendMessage(fromId, "Your announcement has been successfully scheduled.")
+	}
+
+	setTimeout(async() => {
+    	return sendScheduledAnnouncement(id, msgtext);}, timeToSend - now);
+}
+
+const sendScheduledAnnouncement = async(id, msgtext) => {
+	// TODO: switch from admin to all
+	// TODO: add support for images and videos	
+
+ 	for(let user_id of admin_ids) {
+        bot.sendMessage(user_id, msgtext);
+    }
+}
+
 
 
 ////////////////////////////////////////////////////////////////////////////
@@ -311,9 +364,9 @@ const checkShouldSendVerse = async () => {
 ////////////////////////////////////////////////////////////////////////////
 
 bot.on('message', async (msg) => {
-    if (expectingFeedback[`${msg.from.id}`] == 1) {
+    if (expectingFeedback[`${msg.from.id}`]) {
         if (msg.text == 'Cancel') {
-            expectingFeedback[`${msg.from.id}`] = 0;
+            expectingFeedback[`${msg.from.id}`] = false;
             bot.sendMessage(msg.from.id, cancellationMessage);
         } else {
             let name = msg.from.first_name;
@@ -323,13 +376,13 @@ bot.on('message', async (msg) => {
                 user_id,
                 message: msg.text
             });
-            expectingFeedback[`${msg.from.id}`] = 0;
+            expectingFeedback[`${msg.from.id}`] = false;
             bot.sendMessage(msg.from.id, feedbackReceivedMessage);
         }
     }
-    else if (expectingTestimony[`${msg.from.id}`] == 1) {
+    else if (expectingTestimony[`${msg.from.id}`]) {
         if (msg.text == 'Cancel') {
-            expectingTestimony[`${msg.from.id}`] = 0;
+            expectingTestimony[`${msg.from.id}`] = false;
             bot.sendMessage(msg.from.id, cancellationMessage);
         } else {
             //keep track of last latest
@@ -351,26 +404,100 @@ bot.on('message', async (msg) => {
                     sent: doc.data().sent
                 })
             })
-            expectingTestimony[`${msg.from.id}`] = 0;
+            expectingTestimony[`${msg.from.id}`] = false;
             bot.sendMessage(msg.from.id, testimonyReceivedMessage);
         }
     }
-    else if (expectingAnnouncement[`${msg.from.id}`] == 1) {
+    else if (expectingAnnouncement[`${msg.from.id}`]) {
         if (msg.text == 'Cancel') {
-            expectingAnnouncement[`${msg.from.id}`] = 0;
+            expectingAnnouncement[`${msg.from.id}`] = false;
             bot.sendMessage(msg.from.id, cancellationMessage);
         }
         else {
             //announcement
-            expectingAnnouncement[`${msg.from.id}`] = 0;
+            expectingAnnouncement[`${msg.from.id}`] = false;
             sendOutAnnouncement(msg);
             bot.sendMessage(msg.from.id, "Your announcement has been sent!");
 
-            if (msg.text != null) {
-            	saveAnnouncementToFirebase(msg.text);
+            if (msg.text) {
+            	saveAnnouncementToFirebase(msg.text, null);
             	bot.sendMessage(msg.from.id, "Your announcement has been saved to firebase.")
         	}
         }
+    }
+    else if (expectingScheduled[`${msg.from.id}`]) {
+    	// 0: Stage (1 - waiting for date, 2 - waiting for time, 3 - waiting for announcement)
+		// 1: Space
+		// 2-7: DDMMYY of scheduled announcement eg 251220 is Christmas 2020
+		// 8: Space
+		// 9-12: HHMM of scheduled announcement (24 hrs) eg 2359
+		let stage = expectingScheduled[`${msg.from.id}`][0];
+		switch (stage) {
+			case "1":{
+				// Data validation
+				if (!msg.text) {
+					bot.sendMessage(msg.from.id, "Please send text.");
+					break;
+				}
+				let date = msg.text.trim();
+				if (date.length != 6 || date.slice(0, 2) > 31 || date.slice(2, 4) > 12) {
+					bot.sendMessage(msg.from.id, "Incorrect format! Please send DDMMYY.");
+					break;
+				}
+
+				expectingScheduled[`${msg.from.id}`] = "2 " + date;
+				bot.sendMessage(msg.from.id, scheduledTimeMessage);
+				break;
+			}
+			case "2":{
+				// Data validation
+				if (!msg.text) {
+					bot.sendMessage(msg.from.id, "Please send text.");
+					break;
+				}
+				let time = msg.text.trim();
+
+				// Go back to date stage
+				if (time == "/back") {
+					expectingScheduled[`${msg.from.id}`] = "1";
+					bot.sendMessage(scheduledDateMessage);
+				}
+				// Data validation
+				else if (time.length != 4 || time.slice(0, 2) > 23 || time.slice(2) > 59) {
+					bot.sendMessage(msg.from.id, "Incorrect format! Please send HHMM.");
+				}
+				// move to text stage
+				else {
+					let date = expectingScheduled[`${msg.from.id}`].slice(2,8);
+					expectingScheduled[`${msg.from.id}`] = "3 " + date + " " + time;
+					bot.sendMessage(msg.from.id, generateScheduleMessage(date, time));
+				}
+				break;
+			}
+			case "3":{
+				// Data validation
+				if (!msg.text) {
+					bot.sendMessage(msg.from.id, "Please send text.");
+				}
+				// Back to time stage
+				else if (msg.text == "/back") {
+					expectingScheduled[`${msg.from.id}`] = "2 " + expectingScheduled[`${msg.from.id}`].slice(2,8);
+					bot.sendMessage(msg.from.id, scheduledTimeMessage);
+				}
+				else {
+					// reset
+					expectingScheduled[`${msg.from.id}`] = false;
+
+					// save announcement to firebase
+					let date = getDate(expectingScheduled[`${msg.from.id}`])
+            		let announcementId = await saveAnnouncementToFirebase(msg.text, date);
+            		bot.sendMessage(msg.from.id, "Your scheduled announcement has been saved to firebase.")
+
+            		scheduleAnnouncement(announcementId, msg.text, date, msg.from.id);
+				}
+				break;
+			}
+		}
     }
     else if (msg.text == '/start') {
         let name = msg.from.first_name;
@@ -411,12 +538,12 @@ bot.on('message', async (msg) => {
     else if (msg.text == '/feedback') {
         // Send feedback request message, flag user as 
         bot.sendMessage(msg.from.id, feedbackRequestMessage);
-        expectingFeedback[`${msg.from.id}`] = 1;
+        expectingFeedback[`${msg.from.id}`] = true;
     }
     else if (msg.text == '/shouthisname') {
         // Send testimony request message
         bot.sendMessage(msg.from.id, testimonyRequestMessage);
-        expectingTestimony[`${msg.from.id}`] = 1;
+        expectingTestimony[`${msg.from.id}`] = true;
     }
     else if (msg.text == '/manage') {        
         if(admin_ids.indexOf(msg.from.id) != -1) {
@@ -437,14 +564,38 @@ bot.on("callback_query", async (query) => {
             editInlineKeyboard(query, manageHomeMessage, manageKeyboard.extract());
             break;
 
-        case ANNOUNCEMENTS_KEY:
-            expectingAnnouncement[`${query.from.id}`] = 1;
-            // bot.sendMessage(query.from.id, annuoncementRequestMessage);                      
+        case ANNOUNCEMENTS_KEY:{
+        	expectingAnnouncement[`${query.from.id}`] = false;
+        	expectingScheduled[`${query.from.id}`] = false;
+
             let announcementKeyboard = new Keyboard.InlineKeyboard();
+            announcementKeyboard.addRow({text: 'Immediate', callback_data: NOW_ANNOUNCMENTS_KEY});
+
+            announcementKeyboard.addRow({text: 'Scheduled', callback_data: SCHEDULED_ANNOUNCEMENTS_KEY});
             announcementKeyboard.addRow({ text: '<< Back', callback_data: MANAGE_HOME_KEY });
-            announcementKeyboard.addRow({text: 'Send out now', callback_data: NOW_ANNOUNCMENTS_KEY});
+            
             editInlineKeyboard(query, typeOfAnnouncementMessage, announcementKeyboard.extract());
             break;
+        }
+
+        case NOW_ANNOUNCMENTS_KEY:{
+            expectingAnnouncement[`${query.from.id}`] = true;
+
+            let announcementKeyboard = new Keyboard.InlineKeyboard();
+            announcementKeyboard.addRow({ text: '<< Back', callback_data: ANNOUNCEMENTS_KEY});
+            editInlineKeyboard(query, announcementRequestMessage, announcementKeyboard.extract());
+            break;
+        }
+
+        case SCHEDULED_ANNOUNCEMENTS_KEY:
+        	expectingScheduled[`${query.from.id}`] = "1";
+
+        	let stage = expectingScheduled[`${query.from.id}`][0];
+
+        	let scheduleKeyboard = new Keyboard.InlineKeyboard();
+        	scheduleKeyboard.addRow({ text: '<< Cancel', callback_data: ANNOUNCEMENTS_KEY});
+        	editInlineKeyboard(query, scheduledDateMessage, scheduleKeyboard.extract());
+        	break;
 
         case SHOUT_HIS_NAME_KEY:
             let shnKeyboard = new Keyboard.InlineKeyboard();
