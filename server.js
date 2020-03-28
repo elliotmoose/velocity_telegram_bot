@@ -1,3 +1,8 @@
+////////////////////////////////////////////////////////////////////////////
+//                                                                        //
+//                              Config & Setup                            //
+//                                                                        //
+////////////////////////////////////////////////////////////////////////////
 const config = require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const Keyboard = require('node-telegram-keyboard-wrapper');
@@ -13,9 +18,13 @@ firebase.initializeApp({
 const firestore = firebase.firestore();
 const token = process.env.STAGING_TELEGRAM_TOKEN;
 const esvToken = process.env.ESV_TOKEN;
+
+// initialize expecting objects
 let expectingFeedback = {}
 let expectingTestimony = {}
 let expectingAnnouncement = {}
+
+// default messages
 const stuffPsMavisSays = ["Amen amen", "That's right", "Come on", "So good", "Wassup people"];
 const feedbackRequestMessage = "What other things would you like me to able to do in future? Send me some feedback in your next message! Your feedback will remain anonymous. To cancel this operation, send 'Cancel'.";
 const feedbackReceivedMessage = "Thank you for your suggestion!"
@@ -34,12 +43,64 @@ const ELLIOT_ID = 536191264;
 const JOEL_ID = 123309697;
 const ADRIEL_ID = 192664082;
 
+// not too sure what this is
 const [MANAGE_HOME_KEY, ANNOUNCEMENTS_KEY, SHOUT_HIS_NAME_KEY, VIEW_TESTIMONY_KEY, APPROVE_TESTIMONY_KEY, REJECT_TESTIMONY_KEY] = ['MANAGE_HOME_KEY', 'ANNOUNCEMENTS_KEY','SHOUT_HIS_NAME_KEY',  'VIEW_TESTIMONY_KEY', 'APPROVE_TESTIMONY_KEY', 'REJECT_TESTIMONY_KEY'];
 
+// inline keyboard setup
 let manageKeyboard = new Keyboard.InlineKeyboard();
 manageKeyboard.addRow({text: 'Make an Announcement', callback_data: ANNOUNCEMENTS_KEY}).addRow({text: 'Shout His Name', callback_data: SHOUT_HIS_NAME_KEY});
 
 
+
+////////////////////////////////////////////////////////////////////////////
+//                                                                        //
+//                             Helper Functions                           //
+//                                                                        //
+////////////////////////////////////////////////////////////////////////////
+
+// general telegram side functions
+const getUsers = async () => {    
+    let snapshot = await firestore.collection("subscriptions").get();        
+    let users = [];
+    snapshot.forEach((user)=> {
+        users.push(user.data());
+    })    
+
+    return users;
+}
+
+const generateWelcomeMessage = (name) => {
+    return `What's up ${name}!!\n\nFor this month, we're going to be reading the first five chapters of Matthew!\n\nI'll be sending you the verses we will be reading daily!`;
+}
+
+const generateAlreadyRegisteredMessage = (name) => {
+    return `Hello there ${name}, you are already registered. Type /latest to get the verse of the day!`
+}
+
+const extractIDFromCallbackData = (data, type) => {
+    return data.replace(type, "");
+}
+
+const extractTypeFromCallbackData = (data) => {
+    let messageTypes = [VIEW_TESTIMONY_KEY, APPROVE_TESTIMONY_KEY, REJECT_TESTIMONY_KEY];
+    for(let type of messageTypes) {
+        if(data.indexOf(type) != -1) {
+            return type;
+        }
+    }
+
+    return null;
+}
+
+const editInlineKeyboard = (query, newMessage, newKeyboard) => {
+    bot.editMessageText(newMessage, {
+        chat_id: query.from.id,
+        message_id: query.message.message_id,
+        reply_markup: newKeyboard
+    });
+}
+
+// verse and /latest
 const fetchAndSendVerse = async (verseString, users) => {
     let headerString = 'Token ' + esvToken;
     let response = await fetch('https://api.esv.org/v3/passage/text/?q=' + verseString + '&include-footnotes=false', {
@@ -65,17 +126,7 @@ const fetchAndSendLatest = async (verseString, id) => {
     let passage = json.passages[0];
     let message = `Here's the latest passage:\n\n` + passage;
     bot.sendMessage(id, message);    
-}
-
-const getUsers = async () => {    
-    let snapshot = await firestore.collection("subscriptions").get();        
-    let users = [];
-    snapshot.forEach((user)=> {
-        users.push(user.data());
-    })    
-
-    return users;
-}       
+}  
 
 const getVerseReferences = async () => {
     let snapshot = await firestore.collection("verses").get();        
@@ -87,10 +138,12 @@ const getVerseReferences = async () => {
     return verses;
 }
 
+// /shouthisname
 const getTestimony = async (id) => {
     let docRef = await firestore.collection("shouthisname").doc(id).get();        
     return docRef.data();
 }
+
 const getTestimonyReferences = async () => {
     let snapshot = await firestore.collection("shouthisname").get();        
     let testimonies = [];
@@ -99,36 +152,6 @@ const getTestimonyReferences = async () => {
     })    
 
     return testimonies;
-}
-
-const getAnnouncements = async () => {
-    let latestRef = firestore.collection("announcements").doc("latest");
-    await latestRef.get()
-    .then((doc) => {
-        let next = doc.data().latest + 1;
-        let nextRef = firestore.collection("announcements").doc(`${next}`)
-        nextRef.get()
-        .then((doc) => {
-            if (doc.exists) {
-                let announcement = doc.data()
-                if (!announcement.sent) {
-                    // Send to all users
-                    bot.sendMessage(JOEL_ID, announcement.message)
-                    .then(() => {
-                        nextRef.set({
-                            message: announcement.message,
-                            sent: true
-                        })
-                        .then(() => {
-                            latestRef.set({
-                                latest: next
-                            })
-                        })
-                    })
-                }
-            }
-        })
-    })
 }
 
 const getShoutHisName = async () => {
@@ -162,6 +185,45 @@ const getShoutHisName = async () => {
 //         })
 //     })
 }
+
+// /announcements
+const getAnnouncements = async () => {
+    let latestRef = firestore.collection("announcements").doc("latest");
+    await latestRef.get()
+    .then((doc) => {
+        let next = doc.data().latest + 1;
+        let nextRef = firestore.collection("announcements").doc(`${next}`)
+        nextRef.get()
+        .then((doc) => {
+            if (doc.exists) {
+                let announcement = doc.data()
+                if (!announcement.sent) {
+                    // Send to all users
+                    bot.sendMessage(JOEL_ID, announcement.message)
+                    .then(() => {
+                        nextRef.set({
+                            message: announcement.message,
+                            sent: true
+                        })
+                        .then(() => {
+                            latestRef.set({
+                                latest: next
+                            })
+                        })
+                    })
+                }
+            }
+        })
+    })
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////
+//                                                                        //
+//                                 Scheduler                              //
+//                                                                        //
+////////////////////////////////////////////////////////////////////////////
 
 const startScheduler = async () => {
     await checkShouldSendVerse();
@@ -207,38 +269,14 @@ const checkShouldSendVerse = async () => {
     }   
 }
 
-const generateWelcomeMessage = (name) => {
-    return `What's up ${name}!!\n\nFor this month, we're going to be reading the first five chapters of Matthew!\n\nI'll be sending you the verses we will be reading daily!`;
-}
 
-const generateAlreadyRegisteredMessage = (name) => {
-    return `Hello there ${name}, you are already registered. Type /latest to get the verse of the day!`
-}
 
-const extractIDFromCallbackData = (data, type) => {
-    return data.replace(type, "");
-}
+////////////////////////////////////////////////////////////////////////////
+//                                                                        //
+//                         Telegram Message Parsing                       //
+//                                                                        //
+////////////////////////////////////////////////////////////////////////////
 
-const extractTypeFromCallbackData = (data) => {
-    let messageTypes = [VIEW_TESTIMONY_KEY, APPROVE_TESTIMONY_KEY, REJECT_TESTIMONY_KEY];
-    for(let type of messageTypes) {
-        if(data.indexOf(type) != -1) {
-            return type;
-        }
-    }
-
-    return null;
-}
-
-const editInlineKeyboard = (query, newMessage, newKeyboard) => {
-    bot.editMessageText(newMessage, {
-        chat_id: query.from.id,
-        message_id: query.message.message_id,
-        reply_markup: newKeyboard
-    });
-}
-
-// New User
 bot.on('message', async (msg) => {
     if (expectingFeedback[`${msg.from.id}`] == 1) {
         if (msg.text == 'Cancel') {
