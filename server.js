@@ -14,11 +14,14 @@ const token = process.env.STAGING_TELEGRAM_TOKEN;
 const esvToken = process.env.ESV_TOKEN;
 const stuffPsMavisSays = ["Amen amen", "That's right", "Come on", "So good", "Wassup people"];
 const feedbackRequestMessage = "Send me some feedback in your next message for me to improve! Else, type 'Cancel'.";
+const livestreamMessage = "The livestream link for this Sunday is ";
 
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, {polling: true});
+let admin_ids = [536191264/*elliot*/, 123309697/*joel*/, 192664082/*adriel*/];
 const ELLIOT_ID = 536191264;
 const JOEL_ID = 123309697;
+const ADRIEL_ID = 192664082;
 
 const fetchAndSendVerse = async (verseString, users) => {
     let headerString = 'Token ' + esvToken;
@@ -65,6 +68,54 @@ const getVerses = async () => {
     })    
 
     return verses;
+}
+
+// livestream
+const fetchLivestream = async (id) => {
+    await firestore.collection("announcements").doc("livestream").get().then((doc) => {
+        let link = doc.data().link;
+        bot.sendMessage(id, livestreamMessage + link);
+    });
+}
+
+const setLivestream = async (newlink, id) => {
+    let toBroadcast = false;
+    let toUpdate = true;
+
+    if (newlink.slice(0,2) == "-d") {
+        newlink = "not ready yet 😔"
+    }
+    else if (newlink.slice(0,2) == "-u") {
+        newlink = newlink.slice(3)
+        toBroadcast = true;
+    }
+    else if (newlink.slice(0,2) == "-c") {
+        toUpdate = false;
+        toBroadcast = true;
+
+        await firestore.collection("announcements").doc("livestream").get().then((doc) => {
+            newlink = doc.data().link;
+        });
+    }
+
+    if (toUpdate) {
+        await firestore.collection("announcements").doc("livestream").set({
+            link: newlink
+        });
+    }
+
+    if (toBroadcast) {
+        /*let users = await getUsers();
+        for(let user of users) {
+            bot.sendMessage(user.chat_id, livestreamMessage + newlink);
+        }*/
+        for (let id of admin_ids) {
+            bot.sendMessage(id, livestreamMessage + newlink);
+        }
+    }
+    else {
+        bot.sendMessage(id, "Updated: " + livestreamMessage + newlink);
+    }      
 }
 
 const getAnnouncements = async () => {
@@ -193,6 +244,22 @@ bot.on('message', async (msg) => {
         // Send feedback request message
         bot.sendMessage(msg.from.id, feedbackRequestMessage);
         //TODO: force reply, save reply to firebase as feedback
+    }
+    else if (msg.text == "/livestream") {
+        fetchLivestream(msg.from.id);
+    }
+    else if (msg.text != null && msg.text.length >= 9 && msg.text.slice(0, 9) == "/updatels") {
+        if(admin_ids.indexOf(msg.from.id) != -1) {
+            if (msg.text.length == 9) {
+                bot.sendMessage(msg.from.id, "To use this, enter:\n/updatels [optional arg] link\n\nwhere [optional arg] has 3 options:\n'-d' to set to default of 'not ready yet 😔'\n'-u' to update link and broadcast new link to everyone\n'-c' to broadcast current link to everyone");
+            }
+            else {
+                setLivestream(msg.text.slice(10), msg.from.id);
+            }
+        }
+        else {            
+            bot.sendMessage(msg.from.id, "You do not have enough faith to run that command");
+        }
     }
     else {
         bot.sendMessage(msg.from.id, stuffPsMavisSays[Math.floor(Math.random() * stuffPsMavisSays.length)]);
