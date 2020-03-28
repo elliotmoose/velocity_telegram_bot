@@ -79,43 +79,44 @@ const fetchLivestream = async (id) => {
 }
 
 const setLivestream = async (newlink, id) => {
-    let toBroadcast = false;
-    let toUpdate = true;
-
-    if (newlink.slice(0,2) == "-d") {
-        newlink = "not ready yet 😔"
-    }
-    else if (newlink.slice(0,2) == "-u") {
-        newlink = newlink.slice(3)
-        toBroadcast = true;
-    }
-    else if (newlink.slice(0,2) == "-c") {
-        toUpdate = false;
-        toBroadcast = true;
-
-        await firestore.collection("announcements").doc("livestream").get().then((doc) => {
-            newlink = doc.data().link;
-        });
-    }
-
-    if (toUpdate) {
-        await firestore.collection("announcements").doc("livestream").set({
-            link: newlink
-        });
-    }
-
-    if (toBroadcast) {
-        let users = await getUsers();
-        for(let user of users) {
-            bot.sendMessage(user.chat_id, livestreamMessage + newlink);
-        }/*
-        for (let id of admin_ids) {
-            bot.sendMessage(id, livestreamMessage + newlink);
-        }*/
+    if (newlink.length == 1) {
+        bot.sendMessage(id, "To use this, enter:\n/updatels [optional arg] [link]\n\nwhere [optional arg] has 3 options:\n'-d' to set to default of 'not ready yet 😔'\n'-u' to update link to [link]\n'-b' to broadcast current link to everyone");
     }
     else {
-        bot.sendMessage(id, "Updated: " + livestreamMessage + newlink);
-    }      
+        if (newlink[1] == "-d") {
+            newlink = "not ready yet 😔"
+            await firestore.collection("announcements").doc("livestream").set({
+                link: newlink
+            });
+            bot.sendMessage(id, "Updated: " + livestreamMessage + newlink);
+        }
+        else if (newlink[1] == "-u") {
+            if (newlink.length != 2) {
+                newlink = newlink[2]
+                await firestore.collection("announcements").doc("livestream").set({
+                    link: newlink
+                });
+                bot.sendMessage(id, "Updated: " + livestreamMessage + newlink);
+            } else {
+                bot.sendMessage(id, "Link is not specified");
+            }
+        }
+        else if (newlink[1] == "-b") {
+            await firestore.collection("announcements").doc("livestream").get().then((doc) => {
+                newlink = doc.data().link;
+            });
+            // let users = await getUsers();
+            // for(let user of users) {
+            //     bot.sendMessage(user.chat_id, livestreamMessage + newlink);
+            // }
+            for (let id of admin_ids) {
+                bot.sendMessage(id, livestreamMessage + newlink);
+            }
+        }
+        else {
+            bot.sendMessage(id, "Unknown flag");
+        }
+    }
 }
 
 const getAnnouncements = async () => {
@@ -248,14 +249,9 @@ bot.on('message', async (msg) => {
     else if (msg.text == "/livestream") {
         fetchLivestream(msg.from.id);
     }
-    else if (msg.text != null && msg.text.length >= 9 && msg.text.slice(0, 9) == "/updatels") {
-        if(admin_ids.indexOf(msg.from.id) != -1) {
-            if (msg.text.length == 9) {
-                bot.sendMessage(msg.from.id, "To use this, enter:\n/updatels [optional arg] link\n\nwhere [optional arg] has 3 options:\n'-d' to set to default of 'not ready yet 😔'\n'-u' to update link and broadcast new link to everyone\n'-c' to broadcast current link to everyone");
-            }
-            else {
-                setLivestream(msg.text.slice(10), msg.from.id);
-            }
+    else if (msg.text.split(" ")[0] == "/updatels") {
+        if(admin_ids.includes(msg.from.id)) {
+            setLivestream(msg.text.split(" "), msg.from.id);
         }
         else {            
             bot.sendMessage(msg.from.id, "You do not have enough faith to run that command");
