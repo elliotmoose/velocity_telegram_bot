@@ -105,13 +105,13 @@ const setLivestream = async (newlink, id) => {
     }
 
     if (toBroadcast) {
-        /*let users = await getUsers();
+        let users = await getUsers();
         for(let user of users) {
             bot.sendMessage(user.chat_id, livestreamMessage + newlink);
-        }*/
+        }/*
         for (let id of admin_ids) {
             bot.sendMessage(id, livestreamMessage + newlink);
-        }
+        }*/
     }
     else {
         bot.sendMessage(id, "Updated: " + livestreamMessage + newlink);
