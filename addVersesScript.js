@@ -73,22 +73,25 @@ fs.readFile('versesToAdd.txt', async (err, data) => {
             }
             console.log(verse);
 
-            // // Test that string is compatible with api (not required)
-            // let headerString = 'Token ' + esvToken;
-            // let response = await fetch('https://api.esv.org/v3/passage/text/?q=' + verse + '&include-footnotes=false', {
-            //     method: 'GET',
-            //     headers: { 'Authorization': headerString },
-            // })
-            // let json = await response.json();
-            // console.log(json.passages[0]);
+            // Test that string is compatible with api (not required)
+            let headerString = 'Token ' + esvToken;
+            let response = await fetch('https://api.esv.org/v3/passage/text/?q=' + verse + '&include-footnotes=false', {
+                method: 'GET',
+                headers: { 'Authorization': headerString },
+            })
+            let json = await response.json();
+            console.log(json.passages[0]);
 
             console.log(firebase.firestore.Timestamp.fromDate(new Date(date + " " + currMonth + " 2020 07:00:00 GMT+8")))
-            //// Add corresponding document to firebase
+            // //// Add corresponding document to firebase
             // firestore.collection("verses").doc().set({
-            //     date: firestore.Timestamp.fromDate(new Date(date + " " + currMonth + " 2020 07:00:00 GMT+8")),
+            //     date: firebase.firestore.Timestamp.fromDate(new Date(date + " " + currMonth + " 2020 07:00:00 GMT+8")),
             //     sent: false,
             //     verse: verse
             // })   
+            // .then(() => {
+            //     console.log("Done!")
+            // })
         }
     }
 })
