@@ -236,21 +236,24 @@ const getAnnouncements = async () => {
         let next = doc.data().latest + 1;
         let nextRef = firestore.collection("announcements").doc(`${next}`)
         nextRef.get()
-        .then((doc) => {
+        .then(async (doc) => {
             if (doc.exists) {
                 let announcement = doc.data()
                 if (!announcement.sent) {
+                    let users = await getUsers();
+
                     // Send to all users
-                    bot.sendMessage(JOEL_ID, announcement.message)
+                    for(let user of users) {
+                        bot.sendMessage(user.chat_id, announcement.message);
+                    }
+                    
+                    nextRef.set({
+                        message: announcement.message,
+                        sent: true
+                    })
                     .then(() => {
-                        nextRef.set({
-                            message: announcement.message,
-                            sent: true
-                        })
-                        .then(() => {
-                            latestRef.set({
-                                latest: next
-                            })
+                        latestRef.set({
+                            latest: next
                         })
                     })
                 }
