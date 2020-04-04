@@ -8,11 +8,11 @@ const TelegramBot = require('node-telegram-bot-api');
 const Keyboard = require('node-telegram-keyboard-wrapper');
 const fetch = require('node-fetch');
 const firebase = require('firebase-admin');
-const serviceAccount = require('./velocitytelegrambot-firebase-adminsdk-6x8f4-03b6ed7bce.json');
+const serviceAccount = require('./bethelvelocitybot-firebase-adminsdk-xyaqi-08bc0dec79.json');
 
 firebase.initializeApp({
     credential: firebase.credential.cert(serviceAccount),
-    databaseURL: "https://velocitytelegrambot.firebaseio.com"
+    databaseURL: "https://bethelvelocitybot.firebaseio.com"
 });
 
 const firestore = firebase.firestore();
