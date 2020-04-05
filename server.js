@@ -3,6 +3,10 @@
 //                              Config & Setup                            //
 //                                                                        //
 ////////////////////////////////////////////////////////////////////////////
+
+// Tokens
+const esvToken = process.env.ESV_TOKEN;
+
 // Library imports
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
@@ -10,24 +14,33 @@ const firebase = require('firebase-admin');
 const Keyboard = require('node-telegram-keyboard-wrapper');
 const fetch = require('node-fetch');
 
-// Utility imports
-const commands = require('./utils/commands/commands');
-const commandStart = require('./utils/commands/commandStart');
-const flavour = require('./utils/flavour');
-
-// Initialise apps
-const bot = new TelegramBot(process.env.STAGING_TELEGRAM_TOKEN, {polling: true});
-firebase.initializeApp({ credential: firebase.credential.cert(JSON.parse(process.env.FIREBASE_KEY)), databaseURL: process.env.FIREBASE_URL });
-const firestore = firebase.firestore();
-
-// Tokens
-const esvToken = process.env.ESV_TOKEN;
+// Module imports
+const Broadcaster = require('./modules/Broadcaster');
+const Commands = require('./modules/commands/Commands');
+const Database = require('./modules/Database');
+const Storage = require('./modules/storage/Storage');
+const UserStateManager = require('./modules/UserStateManager');
 
 // Testing
 const ELLIOT_ID = process.env.ELLIOT_ID;
 const JOEL_ID = process.env.JOEL_ID;
 const ADRIEL_ID = process.env.ADRIEL_ID;
 const admin_ids = [ELLIOT_ID, JOEL_ID, ADRIEL_ID];
+
+// Initialise apps
+const bot = new TelegramBot(process.env.STAGING_TELEGRAM_TOKEN, {polling: true});
+firebase.initializeApp({ credential: firebase.credential.cert(JSON.parse(process.env.FIREBASE_KEY)), databaseURL: process.env.FIREBASE_URL });
+const firestore = firebase.firestore();
+
+// Initialise Modules
+const broadcaster = Broadcaster(bot);
+const storage = Storage(Database(firestore));
+const userStateManager = UserStateManager();
+const commands = Commands(storage, broadcaster, userStateManager);
+
+bot.on('message', async (message) => {        
+    commands.routeMessage(message);
+});
 
 // // initialize expecting objects
 // // expecting feedback/testimony/announcement are used like boolean dictionaries, with the chat_id being the key, and a boolean being the element
@@ -43,20 +56,7 @@ const admin_ids = [ELLIOT_ID, JOEL_ID, ADRIEL_ID];
 // // 9-12: HHMM of scheduled announcement (24 hrs) eg 2359
 // let expectingScheduled = {}
 
-// default messages
-// const feedbackRequestMessage = "What other things would you like me to able to do in future? Send me some feedback in your next message! Your feedback will remain anonymous. To cancel this operation, send 'Cancel'.";
-// const feedbackReceivedMessage = "Thank you for your suggestion!"
-// const testimonyRequestMessage = "Let's lift up the name of Jesus!! What would you like to thank him for? Your testimony will be reviewed by an admin before it will be broadcast to all subscribers! To cancel this operation, type 'Cancel'.";
-// const testimonyReceivedMessage = "Amen amen!! Thank you for sharing that with us!"
-// const cancellationMessage = "SHORE!"
-
-// const manageHomeMessage = "What would you like to manage?";
-// const typeOfAnnouncementMessage = "What kind of announcement would you like to create?";
-// const announcementRequestMessage = "Send me the announcement you want to broadcast\n\n(text, photo, and video accepted but captions don't work)";
-// const shoutHisNameViewTestimonyMessage = "Select a testimony to view.";
-// const scheduledDateMessage = "Send scheduled date to send announcement\n\n(enter in DDMMYY format eg 020620)";
-// const scheduledTimeMessage = "Send scheduled time to send announcement\n\n(enter in 24 hr HHMM format eg 2359)\n(/back to change date)";
-// const livestreamMessage = "The livestream link for this Sunday is ";
+// default messages moved to Messages.js
 
 // // inline keyboard keys
 // // IMPT NOTE: keys can only be one char long. the rest of the callback data string is used for other data
@@ -409,10 +409,15 @@ const admin_ids = [ELLIOT_ID, JOEL_ID, ADRIEL_ID];
 //                                                                        //
 ////////////////////////////////////////////////////////////////////////////
 
-bot.on('message', async (msg) => {
-    const name = msg.from.first_name;
-    const id = msg.from.id;
-    const text = msg.text;
+// bot.on('message', async (message) => {        
+//     commands.routeMessage(message);    
+
+    // if (commands.isStartCommand(text)) {
+    //     routeCommand()
+    //     routeCommand()
+    //     commandStart.run(bot, firestore, name, id);
+    // }
+
 //     if (expectingFeedback[`${msg.from.id}`]) {
 //         if (msg.text == 'Cancel') {
 //             expectingFeedback[`${msg.from.id}`] = false;
@@ -549,9 +554,13 @@ bot.on('message', async (msg) => {
 // 		}
 //     }
 //     else 
-    if (commands.isStartCommand(text)) {
-        commandStart.run(bot, firestore, name, id);
-    }
+
+//     else if (msg.text == '/latest') {
+//     else if (msg.text == '/latest') {
+//     else if (msg.text == '/latest') {
+//     else if (msg.text == '/latest') {
+//     else if (msg.text == '/latest') {
+//     else if (msg.text == '/latest') {
 //     else if (msg.text == '/latest') {
 //         // Send the latest passage
 //         let latest_sent_doc = await firestore.collection('sent').doc('latest').get();
@@ -594,122 +603,15 @@ bot.on('message', async (msg) => {
 //             bot.sendMessage(msg.from.id, "You do not have enough faith to run that command");
 //         }
 //     }
-    else {
-        bot.sendMessage(id, flavour.generateRandomQuote());
-    }
-});
-
-// bot.on("callback_query", async (query) => {
-//     switch (query.data[0]) {
-//         case MANAGE_HOME_KEY: 
-//             editInlineKeyboard(query, manageHomeMessage, manageKeyboard.extract());
-//             break;
-
-//         case ANNOUNCEMENTS_KEY:{
-//         	expectingAnnouncement[`${query.from.id}`] = false;
-//         	expectingScheduled[`${query.from.id}`] = false;
-
-//             let announcementKeyboard = new Keyboard.InlineKeyboard();
-//             announcementKeyboard.addRow({text: 'Immediate', callback_data: NOW_ANNOUNCMENTS_KEY});
-
-//             announcementKeyboard.addRow({text: 'Scheduled', callback_data: SCHEDULED_ANNOUNCEMENTS_KEY});
-//             announcementKeyboard.addRow({ text: '<< Back', callback_data: MANAGE_HOME_KEY });
-            
-//             editInlineKeyboard(query, typeOfAnnouncementMessage, announcementKeyboard.extract());
-//             break;
-//         }
-
-//         case NOW_ANNOUNCMENTS_KEY:{
-//             expectingAnnouncement[`${query.from.id}`] = true;
-
-//             let announcementKeyboard = new Keyboard.InlineKeyboard();
-//             announcementKeyboard.addRow({ text: '<< Back', callback_data: ANNOUNCEMENTS_KEY});
-//             editInlineKeyboard(query, announcementRequestMessage, announcementKeyboard.extract());
-//             break;
-//         }
-
-//         case SCHEDULED_ANNOUNCEMENTS_KEY:
-//         	expectingScheduled[`${query.from.id}`] = "1";
-
-//         	let stage = expectingScheduled[`${query.from.id}`][0];
-
-//         	let scheduleKeyboard = new Keyboard.InlineKeyboard();
-//         	scheduleKeyboard.addRow({ text: '<< Cancel', callback_data: ANNOUNCEMENTS_KEY});
-//         	editInlineKeyboard(query, scheduledDateMessage, scheduleKeyboard.extract());
-//         	break;
-
-//         case SHOUT_HIS_NAME_KEY:
-//             let shnKeyboard = new Keyboard.InlineKeyboard();
-            
-//             //1. get testimonies
-//             let testimonyReferences = await getTestimonyReferences();
-
-//             //2. build testimony keyboard
-//             testimonyReferences.forEach((testimonyRef)=>{
-//                 let testimony = testimonyRef.data();
-//                 if(!testimony.name || !testimony.user_id) {
-//                     return;
-//                 }
-
-//                 let option = {
-//                     text: testimony.name,
-//                     callback_data: VIEW_TESTIMONY_KEY + testimonyRef.id
-//                 };
-
-//                 shnKeyboard.addRow(option);
-//             });
-            
-//             shnKeyboard.addRow({
-//                 text: '<< Back',
-//                 callback_data: MANAGE_HOME_KEY
-//             });
-//             editInlineKeyboard(query, shoutHisNameViewTestimonyMessage, shnKeyboard.extract());
-//             break;   
-
-//         case VIEW_TESTIMONY_KEY:{
-//             //get testimony and send back
-//             let testimony_id = query.data.slice(1);
-//             let testimony = await getTestimony(testimony_id);
-
-//             if (testimony) {
-//                 let approvalKeyboard = new Keyboard.InlineKeyboard();
-//                 approvalKeyboard.addRow({ text: 'Approve', callback_data: APPROVE_TESTIMONY_KEY + testimony_id });
-//                 approvalKeyboard.addRow({ text: 'Reject', callback_data: REJECT_TESTIMONY_KEY + testimony_id });
-//                 approvalKeyboard.addRow({ text: '<< Back to Testimonies', callback_data: SHOUT_HIS_NAME_KEY });
-//                 let message = `${testimony.message}\n\n from: ${testimony.name}`;
-//                 editInlineKeyboard(query, message, approvalKeyboard.extract());
-//             }
-//             else {
-//                 bot.sendMessage(query.from.id, `That testimony with id ${testimony_id} no longer exists`);
-//             }
-            
-//             break;
-//         }
-
-// 	    case APPROVE_TESTIMONY_KEY:{
-//             let testimony_id = query.data.slice(1);
-//             let approvedKeyboard = new Keyboard.InlineKeyboard();
-//             approvedKeyboard.addRow({ text: '<< Back to Testimonies', callback_data: SHOUT_HIS_NAME_KEY });
-//             console.log(`Approve testimony with id: ${testimony_id}`);
-//             let message = "Testimony Approved!"
-//             editInlineKeyboard(query, message, approvedKeyboard.extract());
-//             break;
-//         }
-
-// 	    case REJECT_TESTIMONY_KEY:{
-//             let testimony_id = query.data.slice(1);
-//             console.log(`Rejected testimony with id: ${testimony_id}`);
-//             let rejectedKeyboard = new Keyboard.InlineKeyboard();
-//             rejectedKeyboard.addRow({ text: '<< Back to Testimonies', callback_data: SHOUT_HIS_NAME_KEY });
-//             let message = "Testimony Rejected!"
-//             editInlineKeyboard(query, message, rejectedKeyboard.extract());
-//             break;
-//         }
-
-//         default:
-//             bot.sendMessage(query.from.id, "Sorry, I don't understand that action :( ");
-//             break;
-//     }
+    // else {
+    //     bot.sendMessage(id, flavour.generateRandomQuote());
+    // }
+// });
+// });
+// });
+// });
+// });
+// });
 // });
 
-// startScheduler();
+
