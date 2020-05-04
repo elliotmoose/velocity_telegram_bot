@@ -4,9 +4,8 @@ const help = require('./Help');
 const feedback = require('./Feedback');
 const testimony = require('./Testimony');
 const manage = require('./Manage');
-const flavour = require('./Flavour');
 
-module.exports = (storage, broadcaster, userStateManager) => {
+const makeCommands = (storage, broadcaster, userStateManager) => {
     return {
         storage,
         broadcaster,
@@ -61,10 +60,12 @@ module.exports = (storage, broadcaster, userStateManager) => {
                         }
                     }
                     else {
-                        flavour(message, this.broadcaster);
+                        // flavour(message, this.broadcaster);
                     }
                     break;
             }
         }
     }
 }
+
+module.exports = makeCommands;

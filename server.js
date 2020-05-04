@@ -15,11 +15,11 @@ const Keyboard = require('node-telegram-keyboard-wrapper');
 const fetch = require('node-fetch');
 
 // Module imports
-const Broadcaster = require('./modules/Broadcaster');
-const Commands = require('./modules/commands/Commands');
-const Database = require('./modules/Database');
-const Storage = require('./modules/storage/Storage');
-const UserStateManager = require('./modules/UserStateManager');
+const makeBroadcaster = require('./modules/Broadcaster');
+const makeCommands = require('./modules/commands/index');
+const makeDatabase = require('./modules/Database');
+const makeStorage = require('./modules/storage/index');
+const makeUserStateManager = require('./modules/UserStateManager');
 
 // Testing
 const ELLIOT_ID = process.env.ELLIOT_ID;
@@ -33,11 +33,16 @@ firebase.initializeApp({ credential: firebase.credential.cert(JSON.parse(process
 const firestore = firebase.firestore();
 
 // Initialise Modules
-const broadcaster = Broadcaster(bot);
-const storage = Storage(Database(firestore));
-const userStateManager = UserStateManager();
-const commands = Commands(storage, broadcaster, userStateManager);
+const database = makeDatabase(firestore);
+const storage = makeStorage(database); //model
+const broadcaster = makeBroadcaster(bot);
+const userStateManager = makeUserStateManager();
+const commands = makeCommands(storage, broadcaster, userStateManager);
+let test = async () => {
+    await firestore.collection('users').doc('123309697').set({id: 123309697, name: 'joel'});
+};
 
+test(); 
 bot.on('message', async (message) => {        
     commands.routeMessage(message);
 });

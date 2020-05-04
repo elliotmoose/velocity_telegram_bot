@@ -1,21 +1,24 @@
-module.exports = (firestore) => {
+const makeDatabase = (firestore) => {
     return {
-        getCollection = async (collectionString) => {
+        getCollection : async (collectionString) => {
             let ref = firestore.collection(collectionString).get();
             return ref;
         },
 
-        getDocument = async (collectionString, docString) => {
+        getDocument : async (collectionString, docString) => {
             let docRef = await firestore.collection(collectionString).doc(docString).get();        
             return docRef.data();
         },
 
-        setDocument = async (collectionString, docString, obj) => {
+        setDocument : async (collectionString, docString, obj) => {
+            console.log(collectionString, docString, obj);
             await firestore.collection(collectionString).doc(docString).set(obj);
         },
 
-        deleteDocument = async () => {
+        deleteDocument : async () => {
             // TODO
         }
     }
-}
+};
+
+module.exports = makeDatabase;

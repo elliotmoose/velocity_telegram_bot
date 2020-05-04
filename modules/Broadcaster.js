@@ -1,8 +1,14 @@
-module.exports = (bot) => {
+const makeBroadcaster = (bot) => {
     return {
-        bot,
         sendMessage: async (id, message) => {
-            await this.bot.sendMessage(id, message);
+            await bot.sendMessage(id, message);
+        },
+        sendMessageToUsers: async (userIds, message) => {
+            for (let userId of userIds) {
+                await bot.sendMessage(userId, message);
+            }
         }
     }
-}
+};
+
+module.exports = makeBroadcaster;

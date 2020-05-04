@@ -8,28 +8,28 @@ module.exports = (database) => {
         },
 
         doesUserExist(id) {
-            return userCache[id] == null;
+            return userCache[id] != null;
         },
 
-        async addUser(id, username) {
-            userCache[id] = username;
-            database.setDocument("users", id, {chat_id: id, name: username});
+        async addUser(id, name) {
+            userCache[id] = name;
+            await database.setDocument("users", `${id}`, {id: id, name: name});
         },
 
         getUserName (id) {
             return userCache[id];
         },
 
-        updateUserName: async(id, name) => {
-            addUser(id, name);
+        async updateUserName (id, name) {
+            await this.addUser(id, name);
         },
 
-        pullUsersToCache () {    
+        async pullUsersToCache () {    
             let snapshot = await database.getCollection("users");    
             userCache = {};
             snapshot.forEach((user)=> {
                 let userData = user.data();
-                userCache[userData.chat_id] = userData.name;
+                userCache[userData.id] = userData.name;
             });
         }
     }
