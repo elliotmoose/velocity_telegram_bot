@@ -4,6 +4,7 @@ const help = require('./Help');
 const feedback = require('./Feedback');
 const testimony = require('./Testimony');
 const manage = require('./Manage');
+const flavour = require('./Flavour');
 
 const makeCommands = (storage, broadcaster, userStateManager) => {
     return {
@@ -60,7 +61,7 @@ const makeCommands = (storage, broadcaster, userStateManager) => {
                         }
                     }
                     else {
-                        // flavour(message, this.broadcaster);
+                        flavour(message, this.broadcaster);
                     }
                     break;
             }
