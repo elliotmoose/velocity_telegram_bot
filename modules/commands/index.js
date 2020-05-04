@@ -1,8 +1,8 @@
 const start = require('./Start');
 const latest = require('./Latest');
 const help = require('./Help');
-const feedback = require('./Feedback');
-const testimony = require('./Testimony');
+const handleFeedback = require('./Feedback');
+const handleTestimony = require('./Testimony');
 const manage = require('./Manage');
 const flavour = require('./Flavour');
 
@@ -12,7 +12,8 @@ const makeCommands = (storage, broadcaster, userStateManager) => {
         broadcaster,
         userStateManager,
         routeMessage(message) {
-            switch (message.text) {
+            switch (message.text) { 
+                
                 //////////////////////////////////////////////////////////////////////////////
                 //                            STATELESS COMMANDS                            //
                 //////////////////////////////////////////////////////////////////////////////
@@ -29,10 +30,10 @@ const makeCommands = (storage, broadcaster, userStateManager) => {
                 //                            STATEFUL COMMANDS                             //
                 //////////////////////////////////////////////////////////////////////////////
                 case '/feedback':
-                    feedback(message, this.storage, this.broadcaster, this.userStateManager);
+                    handleFeedback(message, this.storage, this.broadcaster, this.userStateManager);
                     break;
                 case '/shouthisname':
-                    testimony(message, this.storage, this.broadcaster, this.userStateManager);
+                    handleTestimony(message, this.storage, this.broadcaster, this.userStateManager);
                     break;
                 case '/manage':
                     manage(message, this.storage, this.broadcaster, this.userStateManager);
@@ -44,15 +45,15 @@ const makeCommands = (storage, broadcaster, userStateManager) => {
                         //then it needs to route the new message to the respective module                         
                         switch (userState.module) {
                             case 'FEEDBACK':
-                                feedback(message, this.storage, this.broadcaster, this.userStateManager, this.userState);
+                                handleFeedback(message, this.storage, this.broadcaster, this.userStateManager, userState);
                                 break;
                                 
                             case 'TESTIMONY':
-                                testimony(message, this.storage, this.broadcaster, this.userStateManager, this.userState);                                
+                                handleTestimony(message, this.storage, this.broadcaster, this.userStateManager, userState);                                
                                 break;
 
                             case 'MANAGE':
-                                manage(message, this.storage, this.broadcaster, this.userStateManager, this.userState);                                
+                                manage(message, this.storage, this.broadcaster, this.userStateManager, userState);                                
                                 break;
                         
                             default:

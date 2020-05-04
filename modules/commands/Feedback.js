@@ -2,20 +2,38 @@ const Messages = require('../Messages');
 const UserStateIDs = require('../UserStateIDs');
 const MODULE_ID = 'FEEDBACK';
 
-module.exports = (message, storage, broadcaster, userStateManager, userState=undefined) => {
-    switch (userState) {
-        case undefined:             
-            broadcaster.sendMessage(message.from.id, Messages.feedbackRequestMessage);
-            userStateManager.setStateForUserID(message.from.id, UserStateIDs.FEEDBACK_AWAITING, MODULE_ID, message);
-            break;
-            
+const handleFeedback = (message, storage, broadcaster, userStateManager, userState=undefined) => {
+    let from_id = message.from.id;
+    let from_name = message.from.first_name;
+    let message_content = message.text;
+
+    if (!userState) {
+        broadcaster.sendMessage(from_id, Messages.feedbackRequestMessage);
+        userStateManager.setStateForUserID(from_id, UserStateIDs.FEEDBACK_AWAITING, MODULE_ID, message_content);     
+        return;
+    } 
+
+    switch (userState.stateID) {            
         case UserStateIDs.FEEDBACK_AWAITING:
-            broadcaster.sendMessage(message.from.id, Messages.feedbackReceivedMessage);
-            userStateManager.clearStateForUserID(message.from.id); //finished
+            
+            if(message_content == 'Cancel') {
+                broadcaster.sendMessage(from_id, Messages.cancellationMessage);
+                userStateManager.clearStateForUserID(from_id); //finished    
+                return;
+            }
+
+            //update storage
+            let feedbackStorage = storage.feedbackStorage;
+            feedbackStorage.addFeedback(from_id, from_name, message_content)
+
+            broadcaster.sendMessage(from_id, Messages.feedbackReceivedMessage);
+            userStateManager.clearStateForUserID(from_id); //finished
             break;
     
         default:
-            console.warn("Routed message for user with state to wrong handler (bug). Please look at Commands.js");
+            console.warn("Routed message for user with state to wrong handler (bug). Please look at /commands/index.js");
             break;
     }
 }
+
+module.exports = handleFeedback;

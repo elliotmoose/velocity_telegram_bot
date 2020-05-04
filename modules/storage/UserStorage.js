@@ -3,7 +3,7 @@ let userCache = {};
 
 module.exports = (database) => {
     return {
-        async getAllUsers() {
+        getAllUsers() {
             return userCache;
         },
 
@@ -25,7 +25,7 @@ module.exports = (database) => {
         },
 
         async pullUsersToCache () {    
-            let snapshot = await database.getCollection("users");    
+            let snapshot = await database.getCollection("users");
             userCache = {};
             snapshot.forEach((user)=> {
                 let userData = user.data();

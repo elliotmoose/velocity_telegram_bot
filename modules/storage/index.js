@@ -9,8 +9,8 @@ module.exports = (database) => {
     return {
         userStorage: UserStorage(database),
         // verseStorage: VerseStorage(database),
-        // testimonyStorage: TestimonyStorage(database),
+        testimonyStorage: TestimonyStorage(database),
         // livestreamStorage: LivestreamStorage(database),
-        // feedbackStorage: FeedbackStorage(database)
+        feedbackStorage: FeedbackStorage(database)
     }
 }

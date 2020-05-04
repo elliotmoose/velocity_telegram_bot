@@ -11,7 +11,6 @@ const makeDatabase = (firestore) => {
         },
 
         setDocument : async (collectionString, docString, obj) => {
-            console.log(collectionString, docString, obj);
             await firestore.collection(collectionString).doc(docString).set(obj);
         },
 

@@ -9,7 +9,7 @@ const makeUserStateManager = () => {
         setStateForUserID(userID, stateID, module, message) {
             this.userStates[userID] = {
                 stateID,
-                message, 
+                message, //the last message user sent
                 module //either FEEDBACK, TESTIMONY, MANAGE            
             };
         },
