@@ -2,10 +2,13 @@ const start = require('./Start');
 const latest = require('./Latest');
 const help = require('./Help');
 const livestream = require('./Livestream');
+const subscription = require('./Subscription');
 const handleFeedback = require('./Feedback');
 const handleTestimony = require('./Testimony');
-const manage = require('./Manage');
+const { handleManageMessage, handleManageKeyboard } = require('./Manage');
 const flavour = require('./Flavour');
+const InlineKeys = require('../InlineKeys');
+const magic = require('./Magic');
 
 const makeCommands = (storage, broadcaster, userStateManager, verseManager) => {    
     return {
@@ -31,6 +34,15 @@ const makeCommands = (storage, broadcaster, userStateManager, verseManager) => {
                 case '/livestream':
                     livestream(message, this.storage, this.broadcaster);
                     break;
+                case '/subscribe':
+                    subscription(message, this.storage, this.broadcaster, true);
+                    break;
+                case '/unsubscribe':
+                    subscription(message, this.storage, this.broadcaster, false);
+                    break;
+                case '/magic':
+                    magic(message, this.storage, this.broadcaster);
+                    break;
                 //////////////////////////////////////////////////////////////////////////////
                 //                            STATEFUL COMMANDS                             //
                 //////////////////////////////////////////////////////////////////////////////
@@ -41,7 +53,7 @@ const makeCommands = (storage, broadcaster, userStateManager, verseManager) => {
                     handleTestimony(message, this.storage, this.broadcaster, this.userStateManager);
                     break;
                 case '/manage':
-                    manage(message, this.storage, this.broadcaster, this.userStateManager);
+                    handleManageMessage(message, this.storage, this.broadcaster, this.userStateManager);
                     break;
                 default:
                     let userState = userStateManager.getStateForUserID(message.from.id); //returns {stateId, message, module}, module either FEEDBACK/TESTIMONY/MANAGE (these are the only stateful commands)
@@ -58,7 +70,7 @@ const makeCommands = (storage, broadcaster, userStateManager, verseManager) => {
                                 break;
 
                             case 'MANAGE':
-                                manage(message, this.storage, this.broadcaster, this.userStateManager, userState);                                
+                                handleManageMessage(message, this.storage, this.broadcaster, this.userStateManager, userState);                                
                                 break;
                         
                             default:
@@ -72,8 +84,20 @@ const makeCommands = (storage, broadcaster, userStateManager, verseManager) => {
                     }
                     break;
             }
+        },
+        routeInlineResponse(query) {
+            //***MIGHT BE UNDEFINED: left to Manage to handle
+            let userState = userStateManager.getStateForUserID(query.from.id);
+            switch (InlineKeys.getRouteFromKey(query.data)) {
+                case 'MANAGE':
+                    handleManageKeyboard(query, this.storage, this.broadcaster, this.userStateManager, userState);
+                    break;
+                default:
+                    console.log("PANIC THERES A BUG");
+                    break;
+            }
         }
-    }
+        }
 }
 
 module.exports = makeCommands;

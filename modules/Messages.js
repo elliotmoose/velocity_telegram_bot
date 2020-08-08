@@ -33,6 +33,10 @@ module.exports = {
         return `Good morning ${name}! Here's the passage for today:\n\n`;
     },
 
+    getCheckLivestream: (link) => {
+        return `Double check that you entered the right link:\n\n${link}`
+    },
+
     feedbackRequestMessage: "What other things would you like me to able to do in future? Send me some feedback in your next message! Your feedback will remain anonymous. To cancel this operation, send 'Cancel'.",
     feedbackReceivedMessage: "Thank you for your suggestion!",
     testimonyRequestMessage: "Let's lift up the name of Jesus!! What would you like to thank him for? Your testimony will be reviewed by an admin before it will be broadcast to all subscribers! To cancel this operation, type 'Cancel'.",
@@ -40,17 +44,29 @@ module.exports = {
     cancellationMessage: "SHORE!",
     manageHomeMessage: "What would you like to manage?",
     typeOfAnnouncementMessage: "What kind of announcement would you like to create?",
-    announcementRequestMessage: "Send me the announcement you want to broadcast\n\n(text, photo, and video accepted but captions don't work)",
     shoutHisNameViewTestimonyMessage: "Select a testimony to view.",
     scheduledDateMessage: "Send scheduled date to send announcement\n\n(enter in DDMMYY format eg 020620)",
     scheduledTimeMessage: "Send scheduled time to send announcement\n\n(enter in 24 hr HHMM format eg 2359)\n(/back to change date)",
     livestreamMessage: "The livestream link for this Sunday is ",
+    livestreamRequestMessage: "Enter the new livestream link: ",
     latestHeader : "Here's the latest passage:\n\n",
+    unsubscribeMessage : "So you have chosen death... jk",
+    resubscribeMessage : "Welcome back! I'll be sending you the verses starting tomorrow.",
     helpMessage: "\n\nWhat's up people! Here's what I can do:\n\n" +
-        "/latest : Get the latest verse of the day.\n" + 
-        "/shouthisname : You can submit a testimony to shout the name of Jesus!\n" + 
-        "/feedback : Send me feedback.\n" +
-        "/livestream : Get livestream link\n" + 
-        "/manage : For admins.\n" +
-        "/help : See this message."
+    "/latest : Get the latest verse of the day.\n" + 
+    "/shouthisname : You can submit a testimony to shout the name of Jesus!\n" + 
+    "/feedback : Send me feedback.\n" +
+    "/livestream : Get livestream link\n" + 
+    "/manage : For admins.\n" +
+    "/help : See this message.",
+    adminRejectMessage: "You do not have enough faith to run that command!",
+    announcementRequestMessage: "Send me the announcement you want to broadcast\n\n(text, photo, and video accepted but captions don't work)",
+    announcementConfirmMessage: "Would you like to confirm this announcement?",
+    announcementSentMessage: "Announcement sent!",
+    announcementNotFound: "I could not find the announcement you are looking for. Please try again :(",
+    // announcementRequestMessage: 'pls type ur msg',
+    magicMessage: "🎉 Magic has been performed 🎉",
+    nonMagicianMessage: "You fool! You dare to perform magic? Prepare to be stoned",
+    livestreamSuccessMessage: "The livestream link has been successfully updated! Use /livestream to get the link.",
+    livestreamCancelMessage: "Link not updated. Use /livestream to get the current link."
 }

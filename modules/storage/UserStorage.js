@@ -6,6 +6,7 @@ module.exports = (database) => {
         getAllUsers() {
             return userCache;
         },
+
         getAllUserIds() {
             return Object.keys(userCache);
         },
@@ -15,8 +16,25 @@ module.exports = (database) => {
         },
 
         async addUser(id, name) {
-            userCache[id] = [name, false];
-            await database.setDocument("users", `${id}`, {id: id, name: name, isAdmin: false, isSubscribed: true});
+            let newUser = {id, name, isAdmin: false, isSubscribed: true};
+            userCache[id] = newUser;
+            await database.setDocument("users", `${id}`, newUser);
+        },
+
+        isUserSubscribed(id) {
+            return userCache[id].isSubscribed;
+        },
+
+        async updateCacheAndRemoteForUser(id, fields) {            
+            if(!userCache[id]) {
+                console.error('UserStorage: User does not exist');
+                return;
+            }
+            let user = userCache[id]
+            for (let key in fields) {
+                user[key] = fields[key];
+            }
+            await database.setDocument("users", `${id}`, user);
         },
 
         getUserName (id) {

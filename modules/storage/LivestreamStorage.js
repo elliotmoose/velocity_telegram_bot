@@ -18,6 +18,11 @@ module.exports = (database) => {
                 console.log('LivestreamStorage: No livestream link to load for cache');
             }
             livestreamCache = link.link;
+        },
+
+        async setLivestreamLink(newLink) {
+            await database.setDocument("livestream", "combined", {link: newLink});
+            livestreamCache = newLink;
         }
     }
 }

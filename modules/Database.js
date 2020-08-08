@@ -1,15 +1,19 @@
 const makeDatabase = (firestore) => {
     return {
-        getCollection : async (collectionString) => {
-            let ref = firestore.collection(collectionString).get();
-            return ref;
+        getCollection : async (collectionString, options=[]) => {
+            let query = firestore.collection(collectionString);
+
+            for(let option of options) {
+                query = query.where(...option);
+            }
+
+            return query.get();
         },
 
         getDocument : async (collectionString, docString) => {
             let collectionRef = firestore.collection(collectionString);
             let doc = await collectionRef.doc(docString).get();
-            if(!doc.exists)
-            {
+            if(!doc.exists) {
                 return null;
             }
             return doc.data();

@@ -26,7 +26,7 @@ module.exports = (database) => {
                 }
 
             }
-            
+
             return [];
         },
 
@@ -38,12 +38,14 @@ module.exports = (database) => {
         },
 
         async pullLatestVersesToCache() {
-            let verses = await database.getDocument("verses", "latest").verses;
-            if(!verses)
-            {
+            let latestDoc = await database.getDocument("verses", "latest");
+            let verses = latestDoc.verses;
+            if(!verses) {
                 console.log('VerseStorage: No latest verses to load for cache');
+                return;
             }
-            latestVerses = verses;
+
+            latestVerses = Array.from(verses);
         }
     }
 }

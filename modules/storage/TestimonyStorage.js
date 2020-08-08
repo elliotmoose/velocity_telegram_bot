@@ -16,7 +16,7 @@ const makeTestimonyStorage = (database) => {
             await database.setDocument("testimonies", docId, testimony);
         },
         async getPendingTestimonies() {
-            let collectionSnapshot = await database.getCollection('testimonies');
+            let collectionSnapshot = await database.getCollection('testimonies', [['status','==','PENDING']]);
 
             let testimonies = [];
             collectionSnapshot.forEach((docRef)=> {

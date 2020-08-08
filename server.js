@@ -43,8 +43,12 @@ const verseManager = makeVerseManager(storage, broadcaster);
 const commands = makeCommands(storage, broadcaster, userStateManager, verseManager);
 const scheduler = makeScheduler();
 
-bot.on('message', async (message) => {        
+bot.on('message', async (message) => {    
     commands.routeMessage(message);
+});
+
+bot.on("callback_query", async (query) => {
+    commands.routeInlineResponse(query);
 });
 
 console.log('\n');
