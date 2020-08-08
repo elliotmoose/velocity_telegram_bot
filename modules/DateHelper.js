@@ -28,15 +28,9 @@ const DateTimeString = (date)=>{
 }
 
 const DateString = (date)=>{    
-    let day = date.getDate();
-    let month = date.getMonth();
-    let year = `${date.getFullYear()}`.substr(2);
-
-    if(!day || !month || !year)
-    {
-        return '';
-    }
-    return `${day}/${month}/${year}`;   
+    const dateTimeFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const [{ value: month },,{ value: day },,{ value: year }] = dateTimeFormat .formatToParts(date);
+    return `${year}${month}${day}`;   
 }
 
 module.exports = { DateTimeString, DateString }

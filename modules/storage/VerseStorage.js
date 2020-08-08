@@ -5,23 +5,45 @@ let latestVerses = null;
 module.exports = (database) => {
     return {
         async getLatestVerses() {
-            if (latestVerses != null) {
+            if (latestVerses) {
                 return latestVerses;
             } else {
-                return await database.getDocument("verses", "latest").verses;
+                await this.pullLatestVersesToCache();       
+                return latestVerses;
             }
         },
 
-        async getDailyVerses() {
-            date = DateHelper.DateString(new Date());
-            return await database.getDocument("verses", date).verses;
+        /**
+         * Gets the verses to send for the day, and returns null if there is no pending message
+         */
+        async getUnsentDailyVerses() {
+            let date = DateHelper.DateString(new Date());
+            let verseDataBucket = await database.getDocument("verses", date);            
+            if (verseDataBucket) {
+                // check if sent already
+                if (!verseDataBucket.sent) {
+                    return verseDataBucket.verses;
+                }
+
+            }
+            
+            return [];
         },
 
-        async updateLatestVerses(verses) {
-            date = DateHelper.DateString(new Date());
+        async updateSentFlagAndLatestVerses(verses) {
+            let date = DateHelper.DateString(new Date());
             latestVerses = verses;
             await database.setDocument("verses", "latest", { verses: verses })
             await database.setDocument("verses", date, { verses: verses, sent: true })
+        },
+
+        async pullLatestVersesToCache() {
+            let verses = await database.getDocument("verses", "latest").verses;
+            if(!verses)
+            {
+                console.log('VerseStorage: No latest verses to load for cache');
+            }
+            latestVerses = verses;
         }
     }
 }

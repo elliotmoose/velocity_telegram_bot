@@ -6,11 +6,20 @@ const LivestreamStorage = require('./LivestreamStorage');
 const FeedbackStorage = require('./FeedbackStorage');
 
 module.exports = (database) => {
+    let userStorage = UserStorage(database);
+    userStorage.pullUsersToCache();
+    
+    let testimonyStorage = TestimonyStorage(database);
+    let feedbackStorage = FeedbackStorage(database);
+    let verseStorage = VerseStorage(database);
+    verseStorage.pullLatestVersesToCache();
+    let livestreamStorage = LivestreamStorage(database);
+    livestreamStorage.pullLatestLivestreamLinkToCache();
     return {
-        userStorage: UserStorage(database),
-        // verseStorage: VerseStorage(database),
-        testimonyStorage: TestimonyStorage(database),
-        // livestreamStorage: LivestreamStorage(database),
-        feedbackStorage: FeedbackStorage(database)
+        userStorage,
+        verseStorage,
+        testimonyStorage,
+        livestreamStorage,
+        feedbackStorage
     }
 }

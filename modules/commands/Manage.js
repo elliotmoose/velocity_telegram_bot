@@ -1,6 +1,3 @@
-const Messages = require('../Messages');
-const UserStateIDs = require('../UserStateIDs');
-
 // ////////////////////////////////////////////////////////////////////////////
 // //                                                                        //
 // //                             Inline Keyboards                           //
@@ -25,22 +22,29 @@ const UserStateIDs = require('../UserStateIDs');
 // }
 
 
-
+const Messages = require('../Messages');
+const UserStateIDs = require('../UserStateIDs');
+const Keyboard = require('node-telegram-keyboard-wrapper');
 const MODULE_ID = 'MANAGE';
 
 const handleManage = (message, storage, broadcaster, userStateManager, userState=undefined) => {
-    let from_id = message.from.id;
-    let from_name = message.from.first_name;
+    let id = message.from.id;
+    let name = message.from.first_name;
     let message_content = message.text;
 
     let userStorage = storage.userStorage;
-
+    let keyboard = new Keyboard.InlineKeyboard();
 
     if (!userState) {
         //check permissions
+        if (userStorage.isUserAdmin(id)) {
+            keyboard.addRow({text: 'Make an Announcement'})
+            			.addRow({text: 'Shout His Name'});
+
+        }
 
 
-        broadcaster.sendMessage(from_id, Messages.manageHomeMessage);
+        broadcaster.sendMessage(id, Messages.manageHomeMessage);
         //SEND INLINE KEYBOARD
         // userStateManager.setStateForUserID(from_id, UserStateIDs.MANA, MODULE_ID, message_content);     
         return;

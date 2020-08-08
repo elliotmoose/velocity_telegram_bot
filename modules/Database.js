@@ -6,8 +6,13 @@ const makeDatabase = (firestore) => {
         },
 
         getDocument : async (collectionString, docString) => {
-            let docRef = await firestore.collection(collectionString).doc(docString).get();        
-            return docRef.data();
+            let collectionRef = firestore.collection(collectionString);
+            let doc = await collectionRef.doc(docString).get();
+            if(!doc.exists)
+            {
+                return null;
+            }
+            return doc.data();
         },
 
         setDocument : async (collectionString, docString, obj) => {

@@ -29,6 +29,10 @@ module.exports = {
         return QUOTES[Math.floor(Math.random() * QUOTES.length)];
     },
 
+    getDailyVerseHeader: (name) => {
+        return `Good morning ${name}! Here's the passage for today:\n\n`;
+    },
+
     feedbackRequestMessage: "What other things would you like me to able to do in future? Send me some feedback in your next message! Your feedback will remain anonymous. To cancel this operation, send 'Cancel'.",
     feedbackReceivedMessage: "Thank you for your suggestion!",
     testimonyRequestMessage: "Let's lift up the name of Jesus!! What would you like to thank him for? Your testimony will be reviewed by an admin before it will be broadcast to all subscribers! To cancel this operation, type 'Cancel'.",
@@ -41,4 +45,12 @@ module.exports = {
     scheduledDateMessage: "Send scheduled date to send announcement\n\n(enter in DDMMYY format eg 020620)",
     scheduledTimeMessage: "Send scheduled time to send announcement\n\n(enter in 24 hr HHMM format eg 2359)\n(/back to change date)",
     livestreamMessage: "The livestream link for this Sunday is ",
+    latestHeader : "Here's the latest passage:\n\n",
+    helpMessage: "\n\nWhat's up people! Here's what I can do:\n\n" +
+        "/latest : Get the latest verse of the day.\n" + 
+        "/shouthisname : You can submit a testimony to shout the name of Jesus!\n" + 
+        "/feedback : Send me feedback.\n" +
+        "/livestream : Get livestream link\n" + 
+        "/manage : For admins.\n" +
+        "/help : See this message."
 }
