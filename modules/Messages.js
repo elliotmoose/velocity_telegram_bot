@@ -37,7 +37,11 @@ module.exports = {
         return `Double check that you entered the right link:\n\n${link}`
     },
 
-    feedbackRequestMessage: "What other things would you like me to able to do in future? Send me some feedback in your next message! Your feedback will remain anonymous. To cancel this operation, send 'Cancel'.",
+    getTestimonyMessage: (t) => {
+        return `${t.message}\n\n - ${t.name}`
+    },
+
+    feedbackRequestMessage: "What other things would you like me to able to do in future? Send me some feedback in your next message! Your feedback will be confidential. To cancel this operation, send 'Cancel'.",
     feedbackReceivedMessage: "Thank you for your suggestion!",
     testimonyRequestMessage: "Let's lift up the name of Jesus!! What would you like to thank him for? Your testimony will be reviewed by an admin before it will be broadcast to all subscribers! To cancel this operation, type 'Cancel'.",
     testimonyReceivedMessage: "Amen amen!! Thank you for sharing that with us!",
@@ -56,11 +60,12 @@ module.exports = {
     "/latest : Get the latest verse of the day.\n" + 
     "/shouthisname : You can submit a testimony to shout the name of Jesus!\n" + 
     "/feedback : Send me feedback.\n" +
-    "/livestream : Get livestream link\n" + 
-    "/manage : For admins.\n" +
+    "/livestream : Get livestream link.\n" + 
+    "/subscribe : Subscribe to verse of the day.\n" +
+    "/unsubscribe : Unsubscribe from verse of the day.\n" +
     "/help : See this message.",
     adminRejectMessage: "You do not have enough faith to run that command!",
-    announcementRequestMessage: "Send me the announcement you want to broadcast\n\n(text, photo, and video accepted but captions don't work)",
+    announcementRequestMessage: "Send me an announcement (text/photo/video) you want to broadcast!!",
     announcementConfirmMessage: "Would you like to confirm this announcement?",
     announcementSentMessage: "Announcement sent!",
     announcementNotFound: "I could not find the announcement you are looking for. Please try again :(",
@@ -68,5 +73,10 @@ module.exports = {
     magicMessage: "🎉 Magic has been performed 🎉",
     nonMagicianMessage: "You fool! You dare to perform magic? Prepare to be stoned",
     livestreamSuccessMessage: "The livestream link has been successfully updated! Use /livestream to get the link.",
-    livestreamCancelMessage: "Link not updated. Use /livestream to get the current link."
+    livestreamCancelMessage: "Link not updated. Use /livestream to get the current link.",
+    testimonyAcceptedMessage: "Testimony approved and sent out",
+    testimonyRejectedMessage: "RIP testimony rejected.",
+    shnHeader: "Shout His Name!\n\n",
+    viewShnMessage: "Select a testimony to view",
+    noPendingTestimoniesMessage: "No pending testimonies."
 }

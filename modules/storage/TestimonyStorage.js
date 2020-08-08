@@ -5,10 +5,11 @@ const makeTestimonyStorage = (database) => {
          * @param {String} name
          * @param {String} testimonyMessage
          */
-        async addTestimony(id, name, testimonyMessage) {            
-            let docId = name + new Date().toISOString() + id;
+        async addTestimony(userId, name, testimonyMessage) {            
+            let docId = name + new Date().toISOString() + userId;
             let testimony = {
-                id, 
+                id: docId, 
+                userId, 
                 name, 
                 message: testimonyMessage,
                 status: 'PENDING'//or APPROVED or REJECTED
@@ -22,12 +23,22 @@ const makeTestimonyStorage = (database) => {
             collectionSnapshot.forEach((docRef)=> {
                 let doc = docRef.data();
                 testimonies.push(doc);
+                // testimonyCache[doc.docId] = doc;
             });
 
             return testimonies;
+        },
+
+        async getTestimony(docId) {
+            // return testimonyCache[docId];
+            return await database.getDocument('testimonies', docId);
+        },
+
+        async setTestimonyStatus(docId, status) {
+            await database.updateDocument("testimonies", docId, {status});
+            // testimonyCache[docId].status = status;
         }
     }
 }
 
 module.exports = makeTestimonyStorage;
-

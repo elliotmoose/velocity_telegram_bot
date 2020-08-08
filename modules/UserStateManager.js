@@ -1,8 +1,6 @@
 const makeUserStateManager = () => {
     return {
-        userStates: {
-    
-        },
+        userStates: {},
         /**
          * @params {userID: string, stateID, module, message}
          */

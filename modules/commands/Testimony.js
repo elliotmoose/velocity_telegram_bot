@@ -16,7 +16,7 @@ const handleTestimony = (message, storage, broadcaster, userStateManager, userSt
     switch (userState.stateID) {            
         case UserStateIDs.TESTIMONY_AWAITING:
             
-            if(message_content == 'Cancel') {
+            if(message_content.toLowerCase() == 'cancel') {
                 broadcaster.sendMessage(from_id, Messages.cancellationMessage);
                 userStateManager.clearStateForUserID(from_id); //finished    
                 return;

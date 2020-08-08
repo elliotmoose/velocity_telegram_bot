@@ -8,8 +8,14 @@ module.exports = async (message, broadcaster) => {
     switch (message.text) {
         case "celibacy":
         case "singlehood":
-            sendMessage = "Get behind me Satan!"
+            sendMessage = "Get behind me Satan!";
             break;
+        case "thank you":
+        case "thanks":
+            sendMessage = "Ur welcome :)";
+            break;
+        case "wow":
+            sendMessage = "Come on.";
         default:
             sendMessage = Messages.getRandomQuote();
             break;

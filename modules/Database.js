@@ -19,6 +19,11 @@ const makeDatabase = (firestore) => {
             return doc.data();
         },
 
+        updateDocument : async (collectionString, docString, field) => {
+            let docRef = firestore.collection(collectionString).doc(docString);
+            await docRef.update(field);
+        },
+
         setDocument : async (collectionString, docString, obj) => {
             await firestore.collection(collectionString).doc(docString).set(obj);
         },

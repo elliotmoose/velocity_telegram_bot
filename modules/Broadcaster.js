@@ -37,6 +37,9 @@ const makeBroadcaster = (bot) => {
                 message_id: query.message.message_id,
                 reply_markup: newKeyboard
             });
+        },
+        deleteMessage: async (query) => {
+            bot.deleteMessage(query.from.id, query.message.message_id);
         }
     }
 };
