@@ -10,9 +10,18 @@ const MODULE_ID = 'MANAGE';
 //////////////////////////////////////////////////////////////////////////////
 //                 HANDLES FREE FORM REPLIES TO BOT PROMPTS                 //
 //////////////////////////////////////////////////////////////////////////////
+
+const createHomeKeyboard = () => {
+    let homeKeyboard = new Keyboard.InlineKeyboard();
+    homeKeyboard.addRow({text: 'Make an Announcement', callback_data: InlineKeys.MANAGE_MAKE_ANNOUNCEMENT});
+    homeKeyboard.addRow({text: 'Approve/Reject Testimonies', callback_data: InlineKeys.MANAGE_VIEW_TESTIMONIES});
+    homeKeyboard.addRow({text: 'Update Livestream Link', callback_data: InlineKeys.MANAGE_UPDATE_LIVESTREAM});
+    homeKeyboard.addRow({text: 'Close', callback_data: InlineKeys.MANAGE_CANCEL_MAIN});
+    return homeKeyboard;
+}
+
 const handleManageMessage = (message, storage, broadcaster, userStateManager, userState=undefined) => {
     let id = message.from.id;
-    let name = message.from.first_name;
     let message_content = message.text;
 
     let userStorage = storage.userStorage;
@@ -25,10 +34,7 @@ const handleManageMessage = (message, storage, broadcaster, userStateManager, us
 
     // No User state -> the user just did '/manage'
     if (!userState) {
-        let homeKeyboard = new Keyboard.InlineKeyboard();
-        homeKeyboard.addRow({text: 'Make an Announcement', callback_data: InlineKeys.MANAGE_MAKE_ANNOUNCEMENT});
-        homeKeyboard.addRow({text: 'Shout His Name', callback_data: InlineKeys.MANAGE_VIEW_TESTIMONIES});
-        homeKeyboard.addRow({text: 'Update Livestream Link', callback_data: InlineKeys.MANAGE_UPDATE_LIVESTREAM});
+        let homeKeyboard = createHomeKeyboard();
         broadcaster.sendKeyboard(id, Messages.manageHomeMessage, homeKeyboard);
         return;
     }
@@ -37,14 +43,14 @@ const handleManageMessage = (message, storage, broadcaster, userStateManager, us
         case UserStateIDs.MANAGE_AWAITING_ANNOUNCEMENT: // This is where the user sends in the announcement
             userStateManager.setStateForUserID(id, UserStateIDs.MANAGE_CONFIRMING_ANNOUNCEMENT, MODULE_ID, message); // We store the message itself for photos/videos
             let confirmAnnouncementKeyboard = new Keyboard.InlineKeyboard();
-            confirmAnnouncementKeyboard.addRow({text: 'Send Now', callback_data: InlineKeys.MANAGE_SEND_ANNOUNCEMENT});
+            confirmAnnouncementKeyboard.addRow({text: 'Confirm and Send Now', callback_data: InlineKeys.MANAGE_SEND_ANNOUNCEMENT});
             confirmAnnouncementKeyboard.addRow({text: 'Cancel', callback_data: InlineKeys.MANAGE_CANCEL_ANNOUNCEMENT});
             broadcaster.sendKeyboard(id, Messages.announcementConfirmMessage, confirmAnnouncementKeyboard);
             break;
         case UserStateIDs.MANAGE_AWAITING_LIVESTREAM:
             userStateManager.setStateForUserID(id, UserStateIDs.MANAGE_CONFIRMING_LIVESTREAM, MODULE_ID, message_content);
             let cfmLinkKeyboard = new Keyboard.InlineKeyboard();
-            cfmLinkKeyboard.addRow({text: 'Confirm', callback_data: InlineKeys.MANAGE_CONFIRM_LIVESTREAM});
+            cfmLinkKeyboard.addRow({text: 'Confirm Link', callback_data: InlineKeys.MANAGE_CONFIRM_LIVESTREAM});
             cfmLinkKeyboard.addRow({text: 'Cancel', callback_data: InlineKeys.MANAGE_CANCEL_LIVESTREAM});
             broadcaster.sendKeyboard(id, Messages.getCheckLivestream(message_content), cfmLinkKeyboard);
             break;
@@ -90,8 +96,9 @@ const handleManageKeyboard = async (query, storage, broadcaster, userStateManage
             userStateManager.clearStateForUserID(from_id);            
             break;
         case InlineKeys.MANAGE_CANCEL_ANNOUNCEMENT:
-            broadcaster.replaceInlineKeyboard(query, Messages.cancellationMessage, undefined);
-            userStateManager.clearStateForUserID(from_id);            
+            userStateManager.clearStateForUserID(from_id);
+            let announcementToHomeKeyboard = createHomeKeyboard();
+            broadcaster.replaceInlineKeyboard(query, Messages.manageHomeMessage, announcementToHomeKeyboard);
             break;
         case InlineKeys.MANAGE_UPDATE_LIVESTREAM:
             userStateManager.setStateForUserID(from_id, UserStateIDs.MANAGE_AWAITING_LIVESTREAM, MODULE_ID, message_content);
@@ -108,7 +115,8 @@ const handleManageKeyboard = async (query, storage, broadcaster, userStateManage
             break;
         case InlineKeys.MANAGE_CANCEL_LIVESTREAM:
             userStateManager.clearStateForUserID(from_id);
-            broadcaster.replaceInlineKeyboard(query, Messages.livestreamCancelMessage, undefined);
+            let livestreamToHomeKeyboard = createHomeKeyboard();
+            broadcaster.replaceInlineKeyboard(query, Messages.manageHomeMessage, livestreamToHomeKeyboard);
             break;
         case InlineKeys.MANAGE_VIEW_TESTIMONIES:
             userStateManager.clearStateForUserID(from_id);
@@ -118,16 +126,13 @@ const handleManageKeyboard = async (query, storage, broadcaster, userStateManage
             for (let t of testimonies) {
                 shnKeyboard.addRow({text: t.id, callback_data: "MANAGE_" + t.id});
             }
-            shnKeyboard.addRow({text: "Cancel", callback_data: InlineKeys.MANAGE_CANCEL_TESTIMONIES});
+            shnKeyboard.addRow({text: "< Back", callback_data: InlineKeys.MANAGE_CANCEL_TESTIMONIES});
             userStateManager.setStateForUserID(from_id, UserStateIDs.MANAGE_CHOOSING_TESTIMONIES, MODULE_ID, message_content);  
             broadcaster.replaceInlineKeyboard(query, testimonies.length == 0 ? Messages.noPendingTestimoniesMessage : Messages.viewShnMessage, shnKeyboard);
             break;
         case InlineKeys.MANAGE_CANCEL_TESTIMONIES:
-            let homeKeyboard = new Keyboard.InlineKeyboard();
-            homeKeyboard.addRow({text: 'Make an Announcement', callback_data: InlineKeys.MANAGE_MAKE_ANNOUNCEMENT});
-            homeKeyboard.addRow({text: 'Shout His Name', callback_data: InlineKeys.MANAGE_VIEW_TESTIMONIES});
-            homeKeyboard.addRow({text: 'Update Livestream Link', callback_data: InlineKeys.MANAGE_UPDATE_LIVESTREAM});
-            broadcaster.replaceInlineKeyboard(query, Messages.manageHomeMessage, homeKeyboard);
+            let testimoniesToHomeKeyboard = createHomeKeyboard();
+            broadcaster.replaceInlineKeyboard(query, Messages.manageHomeMessage, testimoniesToHomeKeyboard);
             break;
         case InlineKeys.MANAGE_APPROVE_TESTIMONIES:
             if (userState && userState.stateID == UserStateIDs.MANAGE_APPROVING_TESTIMONIES) {
@@ -160,6 +165,10 @@ const handleManageKeyboard = async (query, storage, broadcaster, userStateManage
             } else {
                 console.log('Manage SHN Reject: Invalid user state');
             }
+            break;
+        case InlineKeys.MANAGE_CANCEL_MAIN:
+            userStateManager.clearStateForUserID(from_id);
+            broadcaster.replaceInlineKeyboard(query, "", undefined);
             break;
         default:
             if (userState) {

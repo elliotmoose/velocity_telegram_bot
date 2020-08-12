@@ -1,4 +1,4 @@
-// Holds all the messages and strings
+// Contains all messages that are sent out to users
 
 const QUOTES = [
     "Amen amen",
@@ -32,19 +32,15 @@ module.exports = {
         return `Good morning ${name}! Here's the passage for today:\n\n`;
     },
 
-    // subscribing
+    // subscribe / unsubscribe
     getAlreadyRegisteredMessage: (name) => {
         return `Hello there ${name}, you are already registered. Type /latest to get the passage(s) for the day!`;
     },
-    unsubscribeMessage : "We're sad to see you go 😢. Feel free to subscribe again with '/subscribe'.",
-    resubscribeMessage : "Welcome back! I'll be sending you the verses starting tomorrow.",
+    unsubscribeMessage : "We're sad to see you go 😢. If you ever want to start receiving daily passages, just '/subscribe' again!",
+    resubscribeMessage : "Welcome back! I'll be sending you the daily passages starting tomorrow :)",
 
     // livestream
-    getCheckLivestream: (link) => {
-        return `Double check that you entered the right link:\n\n${link}`
-    },
     livestreamMessage: "The livestream link for this Sunday is ",
-    livestreamRequestMessage: "Enter the new livestream link: ",
 
     // shouthisname
     getTestimonyMessage: (t) => {
@@ -56,7 +52,6 @@ module.exports = {
     // feedback
     feedbackRequestMessage: "What other things would you like me to able to do in future? Send me some feedback in your next message! To cancel this operation, send 'Cancel'.\n\n(For example, send us more stuff that Ps Mavis says)",
     feedbackReceivedMessage: "Thank you for your suggestion!",
-    cancellationMessage: "SHORE! Action cancelled.",
 
     // latest
     latestHeader : "Here's the latest passage:\n\n",
@@ -72,29 +67,36 @@ module.exports = {
     "/help : See this message.",
 
     // manage
-    manageHomeMessage: "What would you like to manage?",
+    manageHomeMessage: "What would you like to do?",
     adminRejectMessage: "You do not have enough faith to run that command!",
 
-    testimonyAcceptedMessage: "Testimony approved and sent out",
-    testimonyRejectedMessage: "RIP testimony rejected.",
-    viewShnMessage: "Select a testimony to view",
-    noPendingTestimoniesMessage: "No pending testimonies.",
-    shnHeader: "PTL! We have a new testimony!\n\n(You can send in your own testimonies with '/shouthisname')\n\n",
+    testimonyAcceptedMessage: "Testimony approved and broadcasted!",
+    testimonyRejectedMessage: "RIP, testimony rejected.",
+    viewShnMessage: "Select a submission to view:",
+    noPendingTestimoniesMessage: "There are currently no pending submissions.",
+    shnHeader: "PTL! Here's something to thank God for!\n\n(You can send in your own testimonies with '/shouthisname')\n\n",
 
     typeOfAnnouncementMessage: "What kind of announcement would you like to create?",
     scheduledDateMessage: "Send scheduled date to send announcement\n\n(enter in DDMMYY format eg 020620)",
     scheduledTimeMessage: "Send scheduled time to send announcement\n\n(enter in 24 hr HHMM format eg 2359)\n(/back to change date)",
-    announcementRequestMessage: "Send me an announcement (text/photo/video) you want to broadcast!!",
-    announcementConfirmMessage: "Would you like to confirm this announcement?",
-    announcementSentMessage: "Announcement sent!",
+
+    announcementRequestMessage: "Send me an announcement (text/photo/video) you want to broadcast!",
+    announcementConfirmMessage: "Would you like to send this announcement?",
+    announcementSentMessage: "Announcement broadcasted!",
     announcementNotFound: "I could not find the announcement you are looking for. Please try again :(",
-    
-    livestreamSuccessMessage: "The livestream link has been successfully updated! Use /livestream to get the link.",
-    livestreamCancelMessage: "Link not updated. Use /livestream to get the current link.",
+
+    livestreamRequestMessage: "Enter the new livestream link: ",
+    getCheckLivestream: (link) => {
+        return `Please confirm that the link is correct:\n${link}`
+    },
+    livestreamSuccessMessage: "The livestream link has been successfully updated!",
 
     // magic
     magicMessage: "🎉 Magic has been performed 🎉",
     nonMagicianMessage: "You fool! You dare to perform magic?",
+
+    // cancellation
+    cancellationMessage: "SHORE! Action cancelled.",
 
     // flavour
     getRandomQuote: () => {

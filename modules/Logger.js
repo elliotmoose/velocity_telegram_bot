@@ -1,1 +1,0 @@
-// Alerts admins when a bug occurs

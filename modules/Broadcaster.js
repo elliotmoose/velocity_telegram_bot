@@ -33,10 +33,13 @@ const makeBroadcaster = (bot) => {
         replaceInlineKeyboard: async (query, newMessage, newKeyboard) => {
             bot.deleteMessage(query.from.id, query.message.message_id);
             if (newKeyboard) {
-                bot.sendMessage(query.from.id, newMessage, newKeyboard.build());
-            }
-            else {
-                bot.sendMessage(query.from.id, newMessage);
+                if (newMessage) {
+                    bot.sendMessage(query.from.id, newMessage, newKeyboard.build());
+                }
+            } else {
+                if (newMessage) {
+                    bot.sendMessage(query.from.id, newMessage);
+                }
             }
         },
 

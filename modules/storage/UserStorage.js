@@ -57,16 +57,6 @@ module.exports = (database) => {
 
         isUserAdmin(id) {
             return userCache[id].isAdmin;
-        },
-
-        getAdminIds() {
-            admins = [];
-            for (let user in userCache) {
-                if (this.isUserAdmin(id)) {
-                    admins.push(user.id);
-                }
-            }
-            return admins;
         }
     }
 }

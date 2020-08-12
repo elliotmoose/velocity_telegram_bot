@@ -4,15 +4,14 @@
 //                                                                        //
 ////////////////////////////////////////////////////////////////////////////
 
-// Tokens
-const esvToken = process.env.ESV_TOKEN;
+// Flag to determine staging or release bot
+// !!!CAUTION!!!: DO NOT SET TO TRUE EXCEPT FOR DEPLOYMENT
+const isRelease = false
 
 // Library imports
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const firebase = require('firebase-admin');
-const Keyboard = require('node-telegram-keyboard-wrapper');
-const fetch = require('node-fetch');
 
 // Module imports
 const makeBroadcaster = require('./modules/Broadcaster');
@@ -23,20 +22,14 @@ const makeUserStateManager = require('./modules/UserStateManager');
 const makeScheduler = require('./modules/Scheduler');
 const makeVerseManager = require('./modules/VerseManager');
 
-// Testing
-const ELLIOT_ID = process.env.ELLIOT_ID;
-const JOEL_ID = process.env.JOEL_ID;
-const ADRIEL_ID = process.env.ADRIEL_ID;
-const admin_ids = [ELLIOT_ID, JOEL_ID, ADRIEL_ID];
-
 // Initialise apps
-const bot = new TelegramBot(process.env.STAGING_TELEGRAM_TOKEN, {polling: true});
+const bot = isRelease ? new TelegramBot(process.env.RELEASE_TELEGRAM_TOKEN, {polling: true}) : new TelegramBot(process.env.STAGING_TELEGRAM_TOKEN, {polling: true});
 firebase.initializeApp({ credential: firebase.credential.cert(JSON.parse(process.env.FIREBASE_KEY)), databaseURL: process.env.FIREBASE_URL });
 const firestore = firebase.firestore();
 
 // Initialise Modules
 const database = makeDatabase(firestore);
-const storage = makeStorage(database); //model
+const storage = makeStorage(database);
 const broadcaster = makeBroadcaster(bot);
 const userStateManager = makeUserStateManager();
 const verseManager = makeVerseManager(storage, broadcaster);
@@ -51,9 +44,11 @@ bot.on("callback_query", async (query) => {
     commands.routeInlineResponse(query);
 });
 
+bot_name = isRelease ? 'M.A.V.I.S.' : 'P.A.V.I.S.'
+
 console.log('\n');
 console.log('\t==============================================');
-console.log('\t====   P.A.V.I.S  I N I T I A L I Z E D   ====');
+console.log(`\t====  ${bot_name}   I N I T I A L I Z E D  ====`);
 console.log('\t==============================================');
 console.log('\n');
 
