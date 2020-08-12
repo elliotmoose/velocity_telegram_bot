@@ -1,3 +1,6 @@
+// Class to manage verses. Checks if verses have been sent and uses broadcaster to send them.
+// Also converts verse references to verses using the ESV API.
+
 const fetch = require('node-fetch');
 const Messages = require("./Messages");
 
@@ -8,46 +11,44 @@ const makeVerseManager = (storage, broadcaster) => {
         async checkSendVerse() {
             console.log("VerseManager: Checking verses to send now...");
             let verseStorage = storage.verseStorage;
-            //gets verses to send
+            // Gets verses to send
             let verseRefsToSend = await storage.verseStorage.getUnsentDailyVerses();
-            
-            //check if theres verses to send
+            // Check if theres verses to send
             if (verseRefsToSend.length != 0) {
                 console.log("VerseManager: Found verses to send!");
-                //convert verse ref to verse content
+                // Convert verse ref to verse content
                 let verses = [];
                 for (let verseRef of verseRefsToSend) {
                     let verse = await verseManager.getVerseFromVerseRef(verseRef);
                     verses.push(verse);
                 }
 
-                //get all user ids
-                // let allUserIds = storage.userStorage.getAllUserIds();
+                // Get all user ids
                 let allUsers = storage.userStorage.getAllUsers();
 
-                //send message
+                // Send message
                 verses.forEach((verseContent, index)=> {
-                    //go through each user
+                    // Go through each user
                     Object.keys(allUsers).forEach(async (userId)=> {
                         let user = allUsers[userId];
 
-                        //if first message, send header message
+                        // If first message, send header message
                         let header = (index == 0) ? Messages.getDailyVerseHeader(user.name) : "";
                         
-                        //send
+                        // Send
                         if (user.isSubscribed) {
                             await broadcaster.sendMessage(userId, header + verseContent);
                         }
                     })
                 });
-
-                //update latest
+                // Update latest
                 await verseStorage.updateSentFlagAndLatestVerses(verseRefsToSend);                        
             }
             else {
                 console.log("VerseManager: No verses to send!");
             }
         },
+
         async getVerseFromVerseRef(verseRef) {            
             let headerString = 'Token ' + esvToken;
             let response = await fetch('https://api.esv.org/v3/passage/text/?q=' + verseRef + '&include-footnotes=false', {

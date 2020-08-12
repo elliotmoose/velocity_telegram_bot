@@ -1,3 +1,6 @@
+// Abstraction to handle '/magic' command
+// Resets user cache
+
 const Messages = require('../Messages');
 
 module.exports = async (message, storage, broadcaster) => {

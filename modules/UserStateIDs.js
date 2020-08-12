@@ -1,3 +1,5 @@
+// Holds constants for user states
+
 const userStateIds = {
     FEEDBACK_AWAITING: 'FEEDBACK_AWAITING', 
     TESTIMONY_AWAITING: 'TESTIMONY_AWAITING', 

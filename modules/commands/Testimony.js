@@ -1,3 +1,5 @@
+// Abstraction to handle '/shouthisname' command
+
 const Messages = require('../Messages');
 const UserStateIDs = require('../UserStateIDs');
 const MODULE_ID = 'TESTIMONY';
@@ -15,18 +17,17 @@ const handleTestimony = (message, storage, broadcaster, userStateManager, userSt
 
     switch (userState.stateID) {            
         case UserStateIDs.TESTIMONY_AWAITING:
-            
             if(message_content.toLowerCase() == 'cancel') {
                 broadcaster.sendMessage(from_id, Messages.cancellationMessage);
-                userStateManager.clearStateForUserID(from_id); //finished    
+                userStateManager.clearStateForUserID(from_id); // Finished    
                 return;
             }
 
-            //update storage
+            // Update storage
             let testimonyStorage = storage.testimonyStorage;
             testimonyStorage.addTestimony(from_id, from_name, message_content);
             broadcaster.sendMessage(from_id, Messages.testimonyReceivedMessage);
-            userStateManager.clearStateForUserID(from_id); //finished
+            userStateManager.clearStateForUserID(from_id); // Finished
             break;
     
         default:

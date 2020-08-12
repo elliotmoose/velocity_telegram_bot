@@ -1,3 +1,5 @@
+// Abstraction to handle '/start' command
+
 const Messages = require('../Messages');
 
 module.exports = async (message, storage, broadcaster) => {

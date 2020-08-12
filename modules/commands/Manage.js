@@ -1,3 +1,5 @@
+// Abstraction to handle '/manage' command
+
 const Messages = require('../Messages');
 const UserStateIDs = require('../UserStateIDs');
 const InlineKeys = require('../InlineKeys');
@@ -5,6 +7,9 @@ const Keyboard = require('node-telegram-keyboard-wrapper');
 const { MANAGE_APPROVE_TESTIMONIES, MANAGE_REJECT_TESTIMONIES, MANAGE_VIEW_TESTIMONIES } = require('../InlineKeys');
 const MODULE_ID = 'MANAGE';
 
+//////////////////////////////////////////////////////////////////////////////
+//                 HANDLES FREE FORM REPLIES TO BOT PROMPTS                 //
+//////////////////////////////////////////////////////////////////////////////
 const handleManageMessage = (message, storage, broadcaster, userStateManager, userState=undefined) => {
     let id = message.from.id;
     let name = message.from.first_name;
@@ -12,12 +17,13 @@ const handleManageMessage = (message, storage, broadcaster, userStateManager, us
 
     let userStorage = storage.userStorage;
 
-    //check permissions
+    // Check permissions
     if (!userStorage.isUserAdmin(id)) {
         broadcaster.sendMessage(id, Messages.adminRejectMessage);
         return;
     }
 
+    // No User state -> the user just did '/manage'
     if (!userState) {
         let homeKeyboard = new Keyboard.InlineKeyboard();
         homeKeyboard.addRow({text: 'Make an Announcement', callback_data: InlineKeys.MANAGE_MAKE_ANNOUNCEMENT});
@@ -28,8 +34,8 @@ const handleManageMessage = (message, storage, broadcaster, userStateManager, us
     }
 
     switch (userState.stateID) {            
-        case UserStateIDs.MANAGE_AWAITING_ANNOUNCEMENT: //this is where the user sends in the announcement
-            userStateManager.setStateForUserID(id, UserStateIDs.MANAGE_CONFIRMING_ANNOUNCEMENT, MODULE_ID, message); //we store the message itself for photos/videos
+        case UserStateIDs.MANAGE_AWAITING_ANNOUNCEMENT: // This is where the user sends in the announcement
+            userStateManager.setStateForUserID(id, UserStateIDs.MANAGE_CONFIRMING_ANNOUNCEMENT, MODULE_ID, message); // We store the message itself for photos/videos
             let confirmAnnouncementKeyboard = new Keyboard.InlineKeyboard();
             confirmAnnouncementKeyboard.addRow({text: 'Send Now', callback_data: InlineKeys.MANAGE_SEND_ANNOUNCEMENT});
             confirmAnnouncementKeyboard.addRow({text: 'Cancel', callback_data: InlineKeys.MANAGE_CANCEL_ANNOUNCEMENT});
@@ -43,13 +49,14 @@ const handleManageMessage = (message, storage, broadcaster, userStateManager, us
             broadcaster.sendKeyboard(id, Messages.getCheckLivestream(message_content), cfmLinkKeyboard);
             break;
         default:
-            broadcaster.sendMessage(id, "whoop de doop");
             console.warn("Routed message for user with state to wrong handler (bug). Please look at /commands/index.js");
             break;
     }
 }
 
-
+//////////////////////////////////////////////////////////////////////////////
+//                      HANDLES INLINE KEYBOARD CLICKS                      //
+//////////////////////////////////////////////////////////////////////////////
 const handleManageKeyboard = async (query, storage, broadcaster, userStateManager, userState=undefined) => {
     let from_id = query.from.id;
     let message_content = query.message.text;
@@ -57,13 +64,11 @@ const handleManageKeyboard = async (query, storage, broadcaster, userStateManage
 
     switch (query.data) {
         case InlineKeys.MANAGE_MAKE_ANNOUNCEMENT:
-            // let userStorage = storage.userStorage;
             userStateManager.setStateForUserID(from_id, UserStateIDs.MANAGE_AWAITING_ANNOUNCEMENT, MODULE_ID, message_content);     
             broadcaster.replaceInlineKeyboard(query, Messages.announcementRequestMessage, undefined);
             break;
         case InlineKeys.MANAGE_SEND_ANNOUNCEMENT:
-            // let userStorage = storage.userStorage;
-            if(!userState) {
+            if (!userState) {
                 broadcaster.sendMessage(from_id, Messages.announcementNotFound);
                 userStateManager.clearStateForUserID(from_id);
                 return;
@@ -72,7 +77,7 @@ const handleManageKeyboard = async (query, storage, broadcaster, userStateManage
             let allUsers = storage.userStorage.getAllUsers();
             
             for(let user of Object.values(allUsers)) {
-                if(userState.message.photo != null && userState.message.photo.length != 0) {
+                if (userState.message.photo != null && userState.message.photo.length != 0) {
                     broadcaster.sendPhoto(user.id, userState.message.photo[0].file_id, userState.message.caption);                
                 } else if(userState.message.video != null) {
                     broadcaster.sendVideo(user.id, userState.message.video.file_id, userState.message.caption);                
@@ -85,7 +90,6 @@ const handleManageKeyboard = async (query, storage, broadcaster, userStateManage
             userStateManager.clearStateForUserID(from_id);            
             break;
         case InlineKeys.MANAGE_CANCEL_ANNOUNCEMENT:
-            // broadcaster.sendMessage(from_id, Messages.cancellationMessage);
             broadcaster.replaceInlineKeyboard(query, Messages.cancellationMessage, undefined);
             userStateManager.clearStateForUserID(from_id);            
             break;
@@ -110,12 +114,6 @@ const handleManageKeyboard = async (query, storage, broadcaster, userStateManage
             userStateManager.clearStateForUserID(from_id);
             let testimonies = await storage.testimonyStorage.getPendingTestimonies();
             let shnKeyboard = new Keyboard.InlineKeyboard();
-            
-            // if (testimonies.length == 0) {
-            //     userStateManager.clearStateForUserID(from_id);
-            //     broadcaster.replaceInlineKeyboard(query, Messages.noPendingTestimoniesMessage);
-            //     return;
-            // }
 
             for (let t of testimonies) {
                 shnKeyboard.addRow({text: t.id, callback_data: "MANAGE_" + t.id});
@@ -136,17 +134,15 @@ const handleManageKeyboard = async (query, storage, broadcaster, userStateManage
                 let testimonyIdToApprove = userState.message;
                 let testimony = await storage.testimonyStorage.getTestimony(testimonyIdToApprove);
                 
-                //change testimony status to approved
+                // Change testimony status to approved
                 await storage.testimonyStorage.setTestimonyStatus(testimonyIdToApprove, 'APPROVED');
-                
-                //send out testimonies
+                // Send out testimonies
                 let allUserIds = storage.userStorage.getAllUserIds();
                 broadcaster.sendMessageToUsers(allUserIds, Messages.shnHeader + Messages.getTestimonyMessage(testimony));
 
-                //clear user state
+                // Clear user state
                 userStateManager.clearStateForUserID(from_id);            
-
-                //clear inline keyboard
+                // Clear inline keyboard
                 broadcaster.replaceInlineKeyboard(query, Messages.testimonyAcceptedMessage, undefined);
             } else {
                 console.log('Manage SHN Accept: Invalid user state');
@@ -155,13 +151,11 @@ const handleManageKeyboard = async (query, storage, broadcaster, userStateManage
         case InlineKeys.MANAGE_REJECT_TESTIMONIES:
             if (userState && userState.stateID == UserStateIDs.MANAGE_APPROVING_TESTIMONIES) {
                 let rejectID = userState.message;
-
-                // change testimony status to rejected
+                // Change testimony status to rejected
                 storage.testimonyStorage.setTestimonyStatus(rejectID, 'REJECTED');
-                
-                // clear user state
+                // Clear user state
                 userStateManager.clearStateForUserID(from_id);
-                // clear keyboard
+                // Clear keyboard
                 broadcaster.replaceInlineKeyboard(query, Messages.testimonyRejectedMessage, undefined);
             } else {
                 console.log('Manage SHN Reject: Invalid user state');
@@ -173,7 +167,7 @@ const handleManageKeyboard = async (query, storage, broadcaster, userStateManage
                     case UserStateIDs.MANAGE_CHOOSING_TESTIMONIES:
                         let testimonyID = query.data.split('_')[1];
                         
-                        if(!testimonyID) {
+                        if (!testimonyID) {
                             broadcaster.deleteMessage(query);
                             console.log('Manage: Invalid keyboard callback_data');
                             return;

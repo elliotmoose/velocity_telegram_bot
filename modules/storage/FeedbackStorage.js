@@ -1,10 +1,7 @@
+// Abstraction for submitting feedback to firestore
+
 const makeFeedbackStorage = (database) => {
     return {
-        /**
-         * @param {id} number
-         * @param {String} name
-         * @param {String} feedbackMessage
-         */
         async addFeedback(id, name, feedbackMessage) {            
             let docId = name + new Date().toISOString() + id;
             let feedback = {
@@ -19,7 +16,7 @@ const makeFeedbackStorage = (database) => {
 
 module.exports = makeFeedbackStorage;
 
-//doc id: Mastor Pavis'2012-11-04T14:51:06.157Z'1234567
+// Doc ID: Mastor Pavis'2012-11-04T14:51:06.157Z'1234567
 let templateFeedbackDoc = {
     id: 1234567,
     name: 'Mastor Pavis',

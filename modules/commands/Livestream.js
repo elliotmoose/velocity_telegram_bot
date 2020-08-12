@@ -1,7 +1,8 @@
+// Abstraction to handle '/livestream' command
+
 const Messages = require('../Messages');
 
 module.exports = async (message, storage, broadcaster) => {    
-    
     const id = message.from.id;
 
     let link = await storage.livestreamStorage.getLivestreamLink();

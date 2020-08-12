@@ -1,4 +1,6 @@
-const DateTimeString = (date)=>{    
+// Helper functions to format date time and date strings
+
+const DateTimeString = (date) => {    
     var monthNames = [
         "Jan", "Feb", "Mar",
         "Apr", "May", "Jun", "Jul",
@@ -18,16 +20,14 @@ const DateTimeString = (date)=>{
     mins = (mins < 10) ? (`0${mins}`) : mins;
     var strTime = hour + ':' + mins + ' ' + ampm;
 
-    if(!day || !monthNames[monthIndex] || !year || !hour || !mins || !ampm)
-    {
+    if (!day || !monthNames[monthIndex] || !year || !hour || !mins || !ampm) {
         return '';
     }
 
-    // return `${day} ${monthNames[monthIndex]} ${year} - ${hour}:${mins}${ampm}`;
     return `${DateString(date)} - ${hour}:${mins}${ampm}`
 }
 
-const DateString = (date)=>{    
+const DateString = (date) => {    
     const dateTimeFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const [{ value: month },,{ value: day },,{ value: year }] = dateTimeFormat .formatToParts(date);
     return `${year}${month}${day}`;   

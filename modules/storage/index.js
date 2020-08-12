@@ -1,3 +1,5 @@
+// Object that contains all storage abstraction instances
+
 // Storage imports
 const UserStorage = require('./UserStorage');
 const VerseStorage = require('./VerseStorage');
@@ -10,11 +12,15 @@ module.exports = (database) => {
     userStorage.pullUsersToCache();
     
     let testimonyStorage = TestimonyStorage(database);
+
     let feedbackStorage = FeedbackStorage(database);
+
     let verseStorage = VerseStorage(database);
     verseStorage.pullLatestVersesToCache();
+
     let livestreamStorage = LivestreamStorage(database);
     livestreamStorage.pullLatestLivestreamLinkToCache();
+
     return {
         userStorage,
         verseStorage,

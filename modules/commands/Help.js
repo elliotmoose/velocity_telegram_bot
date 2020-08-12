@@ -1,3 +1,5 @@
+// Abstraction to handle '/help' command
+
 const Messages = require('../Messages');
 
 module.exports = async (message, storage, broadcaster) => {

@@ -1,3 +1,5 @@
+// Abstraction for getting / setting livestream links
+
 let livestreamCache = null
 
 module.exports = (database) => {
@@ -13,8 +15,7 @@ module.exports = (database) => {
 
         async pullLatestLivestreamLinkToCache() {
             let link = await database.getDocument("livestream", "combined");
-            if(!link)
-            {
+            if (!link) {
                 console.log('LivestreamStorage: No livestream link to load for cache');
             }
             livestreamCache = link.link;

@@ -1,4 +1,6 @@
-const INTERVAL_TIME = 60 * 1000; //every minute
+// Class that provides scheduling of callbacks
+
+const INTERVAL_TIME = 60 * 1000; // every minute
 
 const makeScheduler = () => {
     return {

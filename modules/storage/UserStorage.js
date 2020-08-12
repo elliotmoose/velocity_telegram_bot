@@ -1,4 +1,5 @@
-// userCache is an object with key = user id and element = user name
+// Abstraction that provides user-related operations to the database
+
 let userCache = {};
 
 module.exports = (database) => {
@@ -56,6 +57,16 @@ module.exports = (database) => {
 
         isUserAdmin(id) {
             return userCache[id].isAdmin;
+        },
+
+        getAdminIds() {
+            admins = [];
+            for (let user in userCache) {
+                if (this.isUserAdmin(id)) {
+                    admins.push(user.id);
+                }
+            }
+            return admins;
         }
     }
 }

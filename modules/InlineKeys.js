@@ -1,3 +1,5 @@
+// Holds constants for inline keyboard keys
+
 const getRouteFromKey = (key) => {
     return key.split('_')[0];
 }
@@ -15,4 +17,4 @@ const keys = {
     MANAGE_CANCEL_LIVESTREAM: 'MANAGE_CANCEL_LIVESTREAM',
 };
 
-module.exports = {...keys, getRouteFromKey};
+module.exports = { ...keys, getRouteFromKey };

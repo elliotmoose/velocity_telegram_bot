@@ -1,3 +1,5 @@
+// Class that provides an interface to the firestore to abstract away database operations
+
 const makeDatabase = (firestore) => {
     return {
         getCollection : async (collectionString, options=[]) => {
@@ -26,10 +28,6 @@ const makeDatabase = (firestore) => {
 
         setDocument : async (collectionString, docString, obj) => {
             await firestore.collection(collectionString).doc(docString).set(obj);
-        },
-
-        deleteDocument : async () => {
-            // TODO
         }
     }
 };

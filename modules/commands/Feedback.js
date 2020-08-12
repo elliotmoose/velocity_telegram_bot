@@ -1,3 +1,5 @@
+// Abstraction to handle '/feedback' command
+
 const Messages = require('../Messages');
 const UserStateIDs = require('../UserStateIDs');
 const MODULE_ID = 'FEEDBACK';
@@ -16,18 +18,17 @@ const handleFeedback = (message, storage, broadcaster, userStateManager, userSta
     switch (userState.stateID) {            
         case UserStateIDs.FEEDBACK_AWAITING:
             
-            if(message_content.toLowerCase() == 'cancel') {
+            if (message_content.toLowerCase() == 'cancel') {
                 broadcaster.sendMessage(from_id, Messages.cancellationMessage);
-                userStateManager.clearStateForUserID(from_id); //finished    
+                userStateManager.clearStateForUserID(from_id); // Finished    
                 return;
             }
 
-            //update storage
+            // Update storage
             let feedbackStorage = storage.feedbackStorage;
-            feedbackStorage.addFeedback(from_id, from_name, message_content)
-
+            feedbackStorage.addFeedback(from_id, from_name, message_content);
             broadcaster.sendMessage(from_id, Messages.feedbackReceivedMessage);
-            userStateManager.clearStateForUserID(from_id); //finished
+            userStateManager.clearStateForUserID(from_id); // Finished
             break;
     
         default:

@@ -1,3 +1,5 @@
+// Abstraction to handle '/subscribe' and '/unsubscribe' commands
+
 const Messages = require('../Messages');
 
 module.exports = async (message, storage, broadcaster, subscribeStatus) => {    
@@ -5,6 +7,7 @@ module.exports = async (message, storage, broadcaster, subscribeStatus) => {
     const id = message.from.id;
     const name = message.from.first_name;
 
+    // If the command is '/subscribe', else '\unsubscribe'
     if (subscribeStatus) {
         if (storage.userStorage.isUserSubscribed(id)) {
             broadcaster.sendMessage(id, Messages.getAlreadyRegisteredMessage(name));

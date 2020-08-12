@@ -1,3 +1,5 @@
+// Entry point to route commands to handlers
+
 const start = require('./Start');
 const latest = require('./Latest');
 const help = require('./Help');
@@ -16,9 +18,9 @@ const makeCommands = (storage, broadcaster, userStateManager, verseManager) => {
         broadcaster,
         userStateManager,
         verseManager,
+
         routeMessage(message) {
             switch (message.text) { 
-                
                 //////////////////////////////////////////////////////////////////////////////
                 //                            STATELESS COMMANDS                            //
                 //////////////////////////////////////////////////////////////////////////////
@@ -55,11 +57,14 @@ const makeCommands = (storage, broadcaster, userStateManager, verseManager) => {
                 case '/manage':
                     handleManageMessage(message, this.storage, this.broadcaster, this.userStateManager);
                     break;
+                //////////////////////////////////////////////////////////////////////////////
+                //                      FREE FORM REPLIES TO BOT PROMPTS                    //
+                //////////////////////////////////////////////////////////////////////////////
                 default:
-                    let userState = userStateManager.getStateForUserID(message.from.id); //returns {stateId, message, module}, module either FEEDBACK/TESTIMONY/MANAGE (these are the only stateful commands)
-                    if(userState !== undefined) {
-                        //find out what command this user state has relation to,
-                        //then it needs to route the new message to the respective module                         
+                    let userState = userStateManager.getStateForUserID(message.from.id); // Returns {stateId, message, module}, module either FEEDBACK/TESTIMONY/MANAGE (these are the only stateful commands)
+                    if (userState !== undefined) {
+                        // Find out what command this user state has relation to,
+                        // then it needs to route the new message to the respective module                         
                         switch (userState.module) {
                             case 'FEEDBACK':
                                 handleFeedback(message, this.storage, this.broadcaster, this.userStateManager, userState);
@@ -78,15 +83,17 @@ const makeCommands = (storage, broadcaster, userStateManager, verseManager) => {
                                 console.log("PANIC THERES A BUG")
                                 break;
                         }
-                    }
-                    else {
+                    } else {
                         flavour(message, this.broadcaster);
                     }
                     break;
             }
         },
+
+        //////////////////////////////////////////////////////////////////////////////
+        //                      MANAGE INLINE KEYBOARDS                             //
+        //////////////////////////////////////////////////////////////////////////////
         routeInlineResponse(query) {
-            //***MIGHT BE UNDEFINED: left to Manage to handle
             let userState = userStateManager.getStateForUserID(query.from.id);
             switch (InlineKeys.getRouteFromKey(query.data)) {
                 case 'MANAGE':

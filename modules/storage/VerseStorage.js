@@ -1,3 +1,5 @@
+// Abstraction that provides verse-related operations to the database
+
 const DateHelper = require('../DateHelper.js');
 
 let latestVerses = null;
@@ -13,18 +15,15 @@ module.exports = (database) => {
             }
         },
 
-        /**
-         * Gets the verses to send for the day, and returns null if there is no pending message
-         */
+        // Gets the verses to send for the day, and returns null if there is no pending message
         async getUnsentDailyVerses() {
             let date = DateHelper.DateString(new Date());
             let verseDataBucket = await database.getDocument("verses", date);            
             if (verseDataBucket) {
-                // check if sent already
+                // Check if sent already
                 if (!verseDataBucket.sent) {
                     return verseDataBucket.verses;
                 }
-
             }
 
             return [];
