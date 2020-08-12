@@ -1,0 +1,206 @@
+// Abstraction to handle '/manage' command
+
+const Messages = require('../Messages');
+const UserStateIDs = require('../UserStateIDs');
+const InlineKeys = require('../InlineKeys');
+const Keyboard = require('node-telegram-keyboard-wrapper');
+const { MANAGE_APPROVE_TESTIMONIES, MANAGE_REJECT_TESTIMONIES, MANAGE_VIEW_TESTIMONIES } = require('../InlineKeys');
+const MODULE_ID = 'MANAGE';
+
+//////////////////////////////////////////////////////////////////////////////
+//                 HANDLES FREE FORM REPLIES TO BOT PROMPTS                 //
+//////////////////////////////////////////////////////////////////////////////
+
+const createHomeKeyboard = () => {
+    let homeKeyboard = new Keyboard.InlineKeyboard();
+    homeKeyboard.addRow({text: 'Make an Announcement', callback_data: InlineKeys.MANAGE_MAKE_ANNOUNCEMENT});
+    homeKeyboard.addRow({text: 'Approve/Reject Testimonies', callback_data: InlineKeys.MANAGE_VIEW_TESTIMONIES});
+    homeKeyboard.addRow({text: 'Update Livestream Link', callback_data: InlineKeys.MANAGE_UPDATE_LIVESTREAM});
+    homeKeyboard.addRow({text: 'Close', callback_data: InlineKeys.MANAGE_CANCEL_MAIN});
+    return homeKeyboard;
+}
+
+const handleManageMessage = (message, storage, broadcaster, userStateManager, userState=undefined) => {
+    let id = message.from.id;
+    let message_content = message.text;
+
+    let userStorage = storage.userStorage;
+
+    // Check permissions
+    if (!userStorage.isUserAdmin(id)) {
+        broadcaster.sendMessage(id, Messages.adminRejectMessage);
+        return;
+    }
+
+    // No User state -> the user just did '/manage'
+    if (!userState) {
+        let homeKeyboard = createHomeKeyboard();
+        broadcaster.sendKeyboard(id, Messages.manageHomeMessage, homeKeyboard);
+        return;
+    }
+
+    switch (userState.stateID) {            
+        case UserStateIDs.MANAGE_AWAITING_ANNOUNCEMENT: // This is where the user sends in the announcement
+            userStateManager.setStateForUserID(id, UserStateIDs.MANAGE_CONFIRMING_ANNOUNCEMENT, MODULE_ID, message); // We store the message itself for photos/videos
+            let confirmAnnouncementKeyboard = new Keyboard.InlineKeyboard();
+            confirmAnnouncementKeyboard.addRow({text: 'Confirm and Send Now', callback_data: InlineKeys.MANAGE_SEND_ANNOUNCEMENT});
+            confirmAnnouncementKeyboard.addRow({text: 'Cancel', callback_data: InlineKeys.MANAGE_CANCEL_ANNOUNCEMENT});
+            broadcaster.sendKeyboard(id, Messages.announcementConfirmMessage, confirmAnnouncementKeyboard);
+            break;
+        case UserStateIDs.MANAGE_AWAITING_LIVESTREAM:
+            userStateManager.setStateForUserID(id, UserStateIDs.MANAGE_CONFIRMING_LIVESTREAM, MODULE_ID, message_content);
+            let cfmLinkKeyboard = new Keyboard.InlineKeyboard();
+            cfmLinkKeyboard.addRow({text: 'Confirm Link', callback_data: InlineKeys.MANAGE_CONFIRM_LIVESTREAM});
+            cfmLinkKeyboard.addRow({text: 'Cancel', callback_data: InlineKeys.MANAGE_CANCEL_LIVESTREAM});
+            broadcaster.sendKeyboard(id, Messages.getCheckLivestream(message_content), cfmLinkKeyboard);
+            break;
+        default:
+            console.warn("Routed message for user with state to wrong handler (bug). Please look at /commands/index.js");
+            break;
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//                      HANDLES INLINE KEYBOARD CLICKS                      //
+//////////////////////////////////////////////////////////////////////////////
+const handleManageKeyboard = async (query, storage, broadcaster, userStateManager, userState=undefined) => {
+    let from_id = query.from.id;
+    let message_content = query.message.text;
+    broadcaster.answerCallback(query.id);
+
+    switch (query.data) {
+        case InlineKeys.MANAGE_MAKE_ANNOUNCEMENT:
+            userStateManager.setStateForUserID(from_id, UserStateIDs.MANAGE_AWAITING_ANNOUNCEMENT, MODULE_ID, message_content);     
+            broadcaster.replaceInlineKeyboard(query, Messages.announcementRequestMessage, undefined);
+            break;
+        case InlineKeys.MANAGE_SEND_ANNOUNCEMENT:
+            if (!userState) {
+                broadcaster.sendMessage(from_id, Messages.announcementNotFound);
+                userStateManager.clearStateForUserID(from_id);
+                return;
+            }
+
+            let allUsers = storage.userStorage.getAllUsers();
+            
+            for(let user of Object.values(allUsers)) {
+                if (userState.message.photo != null && userState.message.photo.length != 0) {
+                    broadcaster.sendPhoto(user.id, userState.message.photo[0].file_id, userState.message.caption);                
+                } else if(userState.message.video != null) {
+                    broadcaster.sendVideo(user.id, userState.message.video.file_id, userState.message.caption);                
+                } else if(userState.message.text != null) {
+                    broadcaster.sendMessage(user.id, userState.message.text);
+                }
+            }
+            
+            broadcaster.replaceInlineKeyboard(query, Messages.announcementSentMessage, undefined);
+            userStateManager.clearStateForUserID(from_id);            
+            break;
+        case InlineKeys.MANAGE_CANCEL_ANNOUNCEMENT:
+            userStateManager.clearStateForUserID(from_id);
+            let announcementToHomeKeyboard = createHomeKeyboard();
+            broadcaster.replaceInlineKeyboard(query, Messages.manageHomeMessage, announcementToHomeKeyboard);
+            break;
+        case InlineKeys.MANAGE_UPDATE_LIVESTREAM:
+            userStateManager.setStateForUserID(from_id, UserStateIDs.MANAGE_AWAITING_LIVESTREAM, MODULE_ID, message_content);
+            broadcaster.replaceInlineKeyboard(query, Messages.livestreamRequestMessage, undefined);
+            break;
+        case InlineKeys.MANAGE_CONFIRM_LIVESTREAM:
+            if (userState) {
+                storage.livestreamStorage.setLivestreamLink(userState.message);
+                userStateManager.clearStateForUserID(from_id);
+                broadcaster.replaceInlineKeyboard(query, Messages.livestreamSuccessMessage, undefined);
+            } else {
+                console.log("PANIC");
+            }
+            break;
+        case InlineKeys.MANAGE_CANCEL_LIVESTREAM:
+            userStateManager.clearStateForUserID(from_id);
+            let livestreamToHomeKeyboard = createHomeKeyboard();
+            broadcaster.replaceInlineKeyboard(query, Messages.manageHomeMessage, livestreamToHomeKeyboard);
+            break;
+        case InlineKeys.MANAGE_VIEW_TESTIMONIES:
+            userStateManager.clearStateForUserID(from_id);
+            let testimonies = await storage.testimonyStorage.getPendingTestimonies();
+            let shnKeyboard = new Keyboard.InlineKeyboard();
+
+            for (let t of testimonies) {
+                shnKeyboard.addRow({text: t.id, callback_data: "MANAGE_" + t.id});
+            }
+            shnKeyboard.addRow({text: "< Back", callback_data: InlineKeys.MANAGE_CANCEL_TESTIMONIES});
+            userStateManager.setStateForUserID(from_id, UserStateIDs.MANAGE_CHOOSING_TESTIMONIES, MODULE_ID, message_content);  
+            broadcaster.replaceInlineKeyboard(query, testimonies.length == 0 ? Messages.noPendingTestimoniesMessage : Messages.viewShnMessage, shnKeyboard);
+            break;
+        case InlineKeys.MANAGE_CANCEL_TESTIMONIES:
+            let testimoniesToHomeKeyboard = createHomeKeyboard();
+            broadcaster.replaceInlineKeyboard(query, Messages.manageHomeMessage, testimoniesToHomeKeyboard);
+            break;
+        case InlineKeys.MANAGE_APPROVE_TESTIMONIES:
+            if (userState && userState.stateID == UserStateIDs.MANAGE_APPROVING_TESTIMONIES) {
+                let testimonyIdToApprove = userState.message;
+                let testimony = await storage.testimonyStorage.getTestimony(testimonyIdToApprove);
+                
+                // Change testimony status to approved
+                await storage.testimonyStorage.setTestimonyStatus(testimonyIdToApprove, 'APPROVED');
+                // Send out testimonies
+                let allUserIds = storage.userStorage.getAllUserIds();
+                broadcaster.sendMessageToUsers(allUserIds, Messages.shnHeader + Messages.getTestimonyMessage(testimony));
+
+                // Clear user state
+                userStateManager.clearStateForUserID(from_id);            
+                // Clear inline keyboard
+                broadcaster.replaceInlineKeyboard(query, Messages.testimonyAcceptedMessage, undefined);
+            } else {
+                console.log('Manage SHN Accept: Invalid user state');
+            }     
+            break;
+        case InlineKeys.MANAGE_REJECT_TESTIMONIES:
+            if (userState && userState.stateID == UserStateIDs.MANAGE_APPROVING_TESTIMONIES) {
+                let rejectID = userState.message;
+                // Change testimony status to rejected
+                storage.testimonyStorage.setTestimonyStatus(rejectID, 'REJECTED');
+                // Clear user state
+                userStateManager.clearStateForUserID(from_id);
+                // Clear keyboard
+                broadcaster.replaceInlineKeyboard(query, Messages.testimonyRejectedMessage, undefined);
+            } else {
+                console.log('Manage SHN Reject: Invalid user state');
+            }
+            break;
+        case InlineKeys.MANAGE_CANCEL_MAIN:
+            userStateManager.clearStateForUserID(from_id);
+            broadcaster.replaceInlineKeyboard(query, "", undefined);
+            break;
+        default:
+            if (userState) {
+                switch (userState.stateID) {
+                    case UserStateIDs.MANAGE_CHOOSING_TESTIMONIES:
+                        let testimonyID = query.data.split('_')[1];
+                        
+                        if (!testimonyID) {
+                            broadcaster.deleteMessage(query);
+                            console.log('Manage: Invalid keyboard callback_data');
+                            return;
+                        }
+                        
+                        userStateManager.setStateForUserID(from_id, UserStateIDs.MANAGE_APPROVING_TESTIMONIES, MODULE_ID, testimonyID);
+                        let t = await storage.testimonyStorage.getTestimony(testimonyID);
+
+                        let approveTestimonyKeyboard = new Keyboard.InlineKeyboard();
+                        approveTestimonyKeyboard.addRow({text: 'Approve', callback_data: MANAGE_APPROVE_TESTIMONIES});
+                        approveTestimonyKeyboard.addRow({text: 'Reject', callback_data: MANAGE_REJECT_TESTIMONIES});
+                        approveTestimonyKeyboard.addRow({text: '< Back', callback_data: MANAGE_VIEW_TESTIMONIES});
+                        broadcaster.replaceInlineKeyboard(query, Messages.getTestimonyMessage(t), approveTestimonyKeyboard);
+                        break;
+                    default:
+                        console.log('PANIC: ' + userState.stateID);
+                        break;
+                }
+            } else {
+                console.log("PANIC");
+            }
+            break;
+    }
+
+}
+
+;module.exports = {handleManageMessage, handleManageKeyboard};
