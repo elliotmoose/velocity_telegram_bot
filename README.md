@@ -11,7 +11,7 @@ I am currently running on version `2.0`!
 Here are some of things I can do for my users:
 
 ### Bible Passage of the Day
-Every day, I'll send out the [Bible Passage of the Day](#uploading-of-bible-passages) to all subscribers of the bot. New users are subscribed to this feature by default when they `/start` the bot. 
+Every day, I'll send out the [Bible Passage of the Day](#uploading-of-bible-passages-new) to all subscribers of the bot. New users are subscribed to this feature by default when they `/start` the bot. 
 #### Unsubscribing / Resubscribing `NEW!`
 Users may unsubscribe from receiving the passages using the 
 `/unsubscribe` command. They can always `/subscribe` again if they choose to.
@@ -19,7 +19,7 @@ Users may unsubscribe from receiving the passages using the
 Users can retrieve the last passage(s) that were sent out by calling `/latest`.
 
 ### Testimonies `NEW!`
-Users can submit testimonies to the server by using the `/shouthisname` command. Testimonies have to be [approved](#approving-/-rejecting-testimony-broadcasts-new) by an admin before they are broadcasted to all subscribers.
+Users can submit testimonies to the server by using the `/shouthisname` command. Testimonies have to be [approved](#approving--rejecting-testimony-broadcasts-new) by an admin before they are broadcasted to all subscribers.
 
 ### Bethel Live `NEW!`
 Users can retrieve the [latest link](#updating-the-bethel-live-link-new) to Bethel's weekly online services by calling `/livestream`.
@@ -52,6 +52,9 @@ Though I am a bot, I still require some assistance in order to function properly
 
 ### Uploading of Bible Passages `NEW!`
 With the `2.0` update, maintainers can upload bible passages through a designated Google Sheets page powered with Google Apps Script. Contact one of the admins for access!
+
+### Updating the Bethel Live Link
+Maintainers should update the livestream link weekly to ensure the video link is accessible to users who call the `/livestream` command. See [above](#updating-the-bethel-live-link-new) for more details.
 
 ### Instatement of Admin Privileges `NEW!`
 Admin privileges can only be granted by [developers](#redistribution) who have access to the database. Every time a new admin is added, the server has to be manually re-synced with the database with a little bit of `/magic`. Contact one of my [developers](#redistribution) for assistance!
