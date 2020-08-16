@@ -18,14 +18,13 @@ module.exports = (database) => {
         // Gets the verses to send for the day, and returns null if there is no pending message
         async getUnsentDailyVerses() {
             let date = DateHelper.DateString(new Date());
-            let verseDataBucket = await database.getDocument("verses", date);            
+            let verseDataBucket = await database.getDocument("verses", date);
             if (verseDataBucket) {
                 // Check if sent already
-                if (!verseDataBucket.sent) {
+                if (!verseDataBucket.sent && new Date().getHours() >= 7) {
                     return verseDataBucket.verses;
                 }
             }
-
             return [];
         },
 
