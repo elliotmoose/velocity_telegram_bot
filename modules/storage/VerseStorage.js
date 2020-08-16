@@ -47,12 +47,3 @@ module.exports = (database) => {
         }
     }
 }
-
-let templateVerse = "For God so loved the world.."
-let templateVerseDoc = {
-    verses: [ templateVerse, templateVerse, templateVerse ],
-    sent: false
-}
-let templateLatestDoc = {
-    verses: [ templateVerse, templateVerse, templateVerse ]
-}

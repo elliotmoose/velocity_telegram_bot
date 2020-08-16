@@ -2,14 +2,33 @@
 
 const makeBroadcaster = (bot) => {
     // Delay added to each method to adhere with API usage restrictions
-    async function delay(ms) {
+    delay = async (ms) => {
         return await new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    splitMessage = (str, l) => {
+        var strs = [];
+        while (str.length > l) {
+            var pos = str.substring(0, l).lastIndexOf(' ');
+            pos = (pos <= 0) ? l : pos;
+            strs.push(str.substring(0, pos));
+            var i = str.indexOf(' ', pos)+1;
+            if (i < pos || i > pos+l) {
+                i = pos;
+            }
+            str = str.substring(i);
+        }
+        strs.push(str);
+        return strs;
     }
 
     return {
         sendMessage: async (id, message) => {
-            await bot.sendMessage(id, message);
-            await delay(50);
+            let messages = splitMessage(message, 4096);
+            for (let chunk in messages) {
+                await bot.sendMessage(id, messages[chunk]);
+                await delay(50);
+            }
         },
 
         sendPhoto: async (id, file_id, caption) => {
@@ -25,9 +44,12 @@ const makeBroadcaster = (bot) => {
         },
 
         sendMessageToUsers: async (userIds, message) => {
+            let messages = splitMessage(message, 4096);
             for (let userId of userIds) {
-                await bot.sendMessage(userId, message);
-                await delay(50);
+                for (let chunk in messages) {
+                    await bot.sendMessage(userId, messages[chunk]);
+                    await delay(50);
+                }
             }
         },
 
