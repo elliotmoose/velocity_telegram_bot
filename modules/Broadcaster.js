@@ -31,20 +31,20 @@ const makeBroadcaster = (bot) => {
         },
 
         replaceInlineKeyboard: async (query, newMessage, newKeyboard) => {
-            bot.deleteMessage(query.from.id, query.message.message_id);
+            await bot.deleteMessage(query.from.id, query.message.message_id);
             if (newKeyboard) {
                 if (newMessage) {
-                    bot.sendMessage(query.from.id, newMessage, newKeyboard.build());
+                    await bot.sendMessage(query.from.id, newMessage, newKeyboard.build());
                 }
             } else {
                 if (newMessage) {
-                    bot.sendMessage(query.from.id, newMessage);
+                    await bot.sendMessage(query.from.id, newMessage);
                 }
             }
         },
 
         editInlineKeyboard: async (query, newMessage, newKeyboard) => {
-            bot.editMessageText(newMessage, {
+            await bot.editMessageText(newMessage, {
                 chat_id: query.from.id,
                 message_id: query.message.message_id,
                 reply_markup: newKeyboard
@@ -52,7 +52,7 @@ const makeBroadcaster = (bot) => {
         },
 
         deleteMessage: async (query) => {
-            bot.deleteMessage(query.from.id, query.message.message_id);
+            await bot.deleteMessage(query.from.id, query.message.message_id);
         }
     }
 };
