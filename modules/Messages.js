@@ -10,7 +10,8 @@ const QUOTES = [
     "So good",
     "Wassup people",
     "Take a look at the stage",
-    "Yall trying to poison me with chilli isit"
+    "Yall trying to poison me with chilli isit",
+    "Is the spicy noodles spicy?"
 ]
 
 module.exports = {
