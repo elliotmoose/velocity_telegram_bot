@@ -74,7 +74,7 @@ module.exports = {
     testimonyRejectedMessage: "RIP, testimony rejected.",
     viewShnMessage: "Select a submission to view:",
     noPendingTestimoniesMessage: "There are currently no pending submissions.",
-    shnHeader: "PTL! Here's something to thank God for!\n\n(You can send in your own testimonies with '/shouthisname')\n\n",
+    shnHeader: "PTL! Here's something to thank God for!\n\n",
 
     typeOfAnnouncementMessage: "What kind of announcement would you like to create?",
     scheduledDateMessage: "Send scheduled date to send announcement\n\n(enter in DDMMYY format eg 020620)",
